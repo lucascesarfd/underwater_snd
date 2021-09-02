@@ -1,0 +1,6 @@
+tensorflow
+torch
+torchaudio
+torchvision
+nnAudio==0.2.5
+tensorboard
