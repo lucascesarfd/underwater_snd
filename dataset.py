@@ -72,7 +72,7 @@ class DeepShipDataset(Dataset):
         return metadata
 
 
-def create_data_loader(train_data, batch_size, validation_split=0.2, shuffle_dataset=False, random_seed=20):
+def create_data_loader(train_data, batch_size, validation_split=0.3, shuffle_dataset=False, random_seed=20):
 
     # Creating data indices for training and validation splits:
     dataset_size = len(train_data)

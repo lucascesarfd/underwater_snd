@@ -8,12 +8,14 @@ from tqdm import tqdm
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
+from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
+
+
+from utils import plot_confusion_matrix, create_dir
 from dataset import DeepShipDataset, create_data_loader
-from model import FeedForwardNet, get_model
-from utils import get_accuracy, get_precision, get_recall, get_f1
+from model import FeedForwardNet, get_model, pre_processing_layers
 from checkpoint import CheckpointManager, Checkpoint
-
 
 
 def create_parser():
@@ -78,6 +80,14 @@ def create_parser():
         default="/workspaces/Underwater/classifiers/results",
         help="",
     )
+    parser.add_argument(
+        "--pre_processing_type",
+        "-p",
+        type=str,
+        choices=['mel','gammatone','cqt'],
+        default="mel",
+        help="",
+    )
 
     return parser
 
@@ -106,7 +116,7 @@ def train_single_epoch(model, data_loader, loss_fn, optimizer, device, writer, e
     return loss.item()
 
 
-def validate_single_epoch(model, validation_dataloader, device, writer, epoch):
+def validate_single_epoch(model, validation_dataloader, device, writer, epoch, metrics={}):
     correct = 0
     total = 0
     model.eval()
@@ -116,22 +126,26 @@ def validate_single_epoch(model, validation_dataloader, device, writer, epoch):
         target_data = target_data.to(device)
 
         prediction = model(input_data)
-        total += target_data.size(0)
+        for metric in metrics:
+            metrics[metric](prediction, target_data)
 
-        correct += (prediction.argmax(1) == target_data).float().sum()
+    for metric in metrics:
+        value = metrics[metric].compute()
+        if metric == "ConfusionMatrix":
+            cm_fig = plot_confusion_matrix(value.numpy(), class_names=validation_dataloader.dataset.class_mapping.keys())
+            writer.add_figure(f'Metrics/{metric}', cm_fig, epoch)
+        else:
+            print(f"Validation {metric}: {value}")
+            writer.add_scalar(f'Metrics/{metric}', value, epoch)
+        metrics[metric].reset()
 
-    accuracy = correct / total
-    writer.add_scalar('Accuracy/validation', accuracy, epoch)
 
-    print(f"Validation Accuracy: {accuracy}")
-
-
-def train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, writer, epochs, checkpoint_manager, initial_epoch=0, device='cpu'):
+def train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, writer, epochs, checkpoint_manager, metrics={}, initial_epoch=0, device='cpu'):
 
     for epoch in range(initial_epoch, epochs):
         print(f"Epoch {epoch+1}")
         loss = train_single_epoch(model, train_dataloader, loss_fn, optimizer, device, writer, epoch)
-        validate_single_epoch(model, validation_dataloader, device, writer, epoch)
+        validate_single_epoch(model, validation_dataloader, device, writer, epoch, metrics=metrics)
 
         # Save a checkpoint.
         checkpoint_manager.save(epoch)
@@ -158,18 +172,14 @@ def main():
     num_of_epochs = args.epochs
     batch_size = args.batch_size
     learning_rate = args.learning_rate
-    log_dir = os.path.join(args.output_dir, "logs")
-    final_model_dir = os.path.join(args.output_dir, "final_model")
-    checkpoint_dir = os.path.join(args.output_dir, "checkpoints")
+    log_dir = create_dir(os.path.join(args.output_dir, "logs"))
+    final_model_dir = create_dir(os.path.join(args.output_dir, "final_model"))
+    checkpoint_dir = create_dir(os.path.join(args.output_dir, "checkpoints"))
+    pre_processing_type = args.pre_processing_type.lower()
 
-    mel_spectrogram = torchaudio.transforms.MelSpectrogram(
-        sample_rate=sample_rate,
-        n_fft=1024,
-        hop_length=512,
-        n_mels=64
-    )
+    transformation = pre_processing_layers[pre_processing_type](sample_rate)
 
-    deep_ship = DeepShipDataset(metadata_file, mel_spectrogram, sample_rate, number_of_samples)
+    deep_ship = DeepShipDataset(metadata_file, transformation, sample_rate, number_of_samples)
 
     # Get the training dataset.
     train_dataloader, validation_dataloader = create_data_loader(deep_ship, batch_size, validation_split=0.3)
@@ -184,6 +194,21 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+    # Initialize metrics.
+    accuracy = Accuracy(average='macro', num_classes=5)
+    precision = Precision(average='macro', num_classes=5)
+    recall = Recall(average='macro', num_classes=5)
+    f1 = F1(average='macro', num_classes=5)
+    confusion_matrix = ConfusionMatrix(num_classes=5)
+
+    metrics = {
+        "Accuracy":accuracy,
+        "Precision":precision,
+        "Recall":recall,
+        "F1":f1,
+        "ConfusionMatrix":confusion_matrix,
+    }
+
     # Create a checkpoint manager.
     checkpoint_manager = CheckpointManager(Checkpoint(model, optimizer), checkpoint_dir, device, max_to_keep=5)
     init_epoch = checkpoint_manager.restore_or_initialize()
@@ -195,13 +220,13 @@ def main():
     images, _ = next(iter(train_dataloader))
     writer.add_graph(model, images)
     h_params = {'learning rate': learning_rate, 'batch size': batch_size, "number of epochs": num_of_epochs}
-    metrics = {'Accuracy/validation': None, 'Loss/train': None}
+    log_metrics = {'Loss/train': 0}
+    writer.add_hparams(h_params, log_metrics)
 
     # Call train routine.
-    train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, writer, num_of_epochs, checkpoint_manager, initial_epoch=init_epoch, device=device)
+    train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, writer, num_of_epochs, checkpoint_manager, metrics=metrics, initial_epoch=init_epoch, device=device)
 
-    # Add hparams and close tensorboard writer.
-    writer.add_hparams(h_params, metrics)
+    # Close tensorboard writer.
     writer.close()
 
     # Save model.
