@@ -66,28 +66,12 @@ class DeepShipDataset(Dataset):
         label = self.metadata.label.iloc[index]
         return torch.tensor(self.class_mapping[label.lower()])
 
-    def _get_metadata(self, metadata_file, random_seed=42):
+    def _get_metadata(self, metadata_file):
         metadata = pd.read_csv(metadata_file)
-        metadata = metadata.sample(frac=1, random_state=random_seed).reset_index(drop=True)
         return metadata
 
 
-def create_data_loader(train_data, batch_size, validation_split=0.3, shuffle_dataset=False, random_seed=20):
+def create_data_loader(data, batch_size):
+    loader = DataLoader(data, batch_size=batch_size)
 
-    # Creating data indices for training and validation splits:
-    dataset_size = len(train_data)
-    indices = list(range(dataset_size))
-    split = int(np.floor(validation_split * dataset_size))
-    if shuffle_dataset:
-        np.random.seed(random_seed)
-        np.random.shuffle(indices)
-    train_indices, val_indices = indices[split:], indices[:split]
-
-    # Creating PT data samplers and loaders:
-    train_sampler = SubsetRandomSampler(train_indices)
-    valid_sampler = SubsetRandomSampler(val_indices)
-
-    train_loader = DataLoader(train_data, batch_size=batch_size, sampler=train_sampler)
-    validation_loader = DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler)
-
-    return train_loader, validation_loader
+    return loader

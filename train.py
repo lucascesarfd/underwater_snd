@@ -3,14 +3,14 @@ import os
 import torch
 import torchaudio
 import torchvision
+import random
+import numpy as np
 
 from tqdm import tqdm
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
-
-
 
 from utils import plot_confusion_matrix, create_dir
 from dataset import DeepShipDataset, create_data_loader
@@ -65,13 +65,6 @@ def create_parser():
         type=str,
         default="/workspaces/Underwater/DeepShip/metadata_10s.csv",
         help="",
-    )
-    parser.add_argument(
-        "--generate_dataset",
-        "-g",
-        action="store_const",
-        default=not(true_var),
-        const=true_var,
     )
     parser.add_argument(
         "--output_dir",
@@ -155,6 +148,10 @@ def train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, wr
 
 
 def main():
+    torch.manual_seed(7)
+    random.seed(7)
+    np.random.seed(7)
+
     parser = create_parser()
     args = parser.parse_args()
 
@@ -179,10 +176,14 @@ def main():
 
     transformation = pre_processing_layers[pre_processing_type](sample_rate)
 
-    deep_ship = DeepShipDataset(metadata_file, transformation, sample_rate, number_of_samples)
+    # Get the training, validation and test dataloaders.
+    file_name = metadata_file.split(".")[0]
 
-    # Get the training dataset.
-    train_dataloader, validation_dataloader = create_data_loader(deep_ship, batch_size, validation_split=0.3)
+    train_dataset = DeepShipDataset(f"{file_name}_train.csv", transformation, sample_rate, number_of_samples)
+    train_dataloader = create_data_loader(train_dataset, batch_size=batch_size)
+
+    validation_dataset = DeepShipDataset(f"{file_name}_validation.csv", transformation, sample_rate, number_of_samples)
+    validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size)
 
     # Declare the model.
     model = get_model(model_name="cnn", device=device)
@@ -219,9 +220,6 @@ def main():
     # Add model graph and hyperparams to the logs.
     images, _ = next(iter(train_dataloader))
     writer.add_graph(model, images)
-    h_params = {'learning rate': learning_rate, 'batch size': batch_size, "number of epochs": num_of_epochs}
-    log_metrics = {'Loss/train': 0}
-    writer.add_hparams(h_params, log_metrics)
 
     # Call train routine.
     train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, writer, num_of_epochs, checkpoint_manager, metrics=metrics, initial_epoch=init_epoch, device=device)
