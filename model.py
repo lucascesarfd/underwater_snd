@@ -22,7 +22,7 @@ def define_gamma_spectrogram(sample_rate):
 
 def define_cqt_spectrogram(sample_rate):
     cqt_spectrogram = Spectrogram.CQT(
-        sr=sample_rate, hop_length=512, fmin=32.7, fmax=None,
+        sr=sample_rate, hop_length=256, fmin=32.7, fmax=None,
         n_bins=64, bins_per_octave=12, filter_scale=1, norm=1,
         window='hann', center=True, pad_mode='reflect', trainable=False,
         output_format='Magnitude', verbose=False
@@ -170,7 +170,7 @@ class CNNNetworkCQT(nn.Module):
             nn.MaxPool2d(kernel_size=2)
         )
         self.flatten = nn.Flatten()
-        self.linear = nn.Linear(128 * 5 * 10, 5)
+        self.linear = nn.Linear(128 * 5 * 9, 5)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):

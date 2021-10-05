@@ -186,9 +186,9 @@ def main():
     validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size)
 
     # Declare the model.
-    model = get_model(model_name="cnn", device=device)
+    model = get_model(model_name="cnncqt", device=device)
     print("Model Architecture")
-    summary(model, (1, 64, 63))
+    summary(model, (1, 64, 126))
     print()
 
     # Initialise loss funtion + optimizer.
