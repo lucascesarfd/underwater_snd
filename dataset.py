@@ -7,18 +7,18 @@ import numpy as np
 
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from torch.utils.data.sampler import SubsetRandomSampler
-
 
 class DeepShipDataset(Dataset):
 
-    def __init__(self, metadata_file, transformation,
-                 target_sample_rate, num_samples):
+    def __init__(self, metadata_file, target_sample_rate,
+                 num_samples, transform=None, target_transform=None):
         self.metadata = self._get_metadata(metadata_file)
-        self.transformation = transformation
+        self.transform = transform
+        self.target_transform = target_transform
         self.target_sample_rate = target_sample_rate
         self.num_samples = num_samples
-        self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4}
+        self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4, 'other':5}
+        self.measures = ["t1_norm", "c1_norm", "p1_norm", "sal_norm", "sv_norm"]
 
     def __len__(self):
         return len(self.metadata)
@@ -26,6 +26,9 @@ class DeepShipDataset(Dataset):
     def __getitem__(self, index):
         audio_sample_path = self.metadata.path.iloc[index]
         label = self._get_audio_sample_label(index)
+        if self.target_transform:
+            label = self.target_transform(label)
+
         signal, sr = torchaudio.load(
             audio_sample_path,
             frame_offset=self.metadata.sub_init.iloc[index],
@@ -35,8 +38,12 @@ class DeepShipDataset(Dataset):
         signal = self._mix_down_to_one_channel(signal)
         signal = self._cut_bigger_samples(signal)
         signal = self._right_pad_small_samples(signal)
-        signal = self.transformation(signal)
-        return signal, label
+        if self.transform:
+            signal = self.transform(signal)
+
+        measures = self._get_physical_measures(index)
+
+        return signal, label, measures
 
     def _right_pad_small_samples(self, signal):
         length_signal = signal.shape[1]
@@ -69,9 +76,12 @@ class DeepShipDataset(Dataset):
     def _get_metadata(self, metadata_file):
         metadata = pd.read_csv(metadata_file)
         return metadata
+    
+    def _get_physical_measures(self, index):
+        return self.metadata[self.measures].iloc[index].astype(np.float32).values
 
 
-def create_data_loader(data, batch_size):
-    loader = DataLoader(data, batch_size=batch_size)
+def create_data_loader(data, batch_size, shuffle=True):
+    loader = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
 
     return loader

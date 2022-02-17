@@ -45,7 +45,7 @@ class FeedForwardNet(nn.Module):
         self.dense_layers = nn.Sequential(
             nn.Linear(64 * 63, 256),
             nn.ReLU(),
-            nn.Linear(256, 5)
+            nn.Linear(256, 6)
         )
         self.softmax = nn.Softmax(dim=1)
 
@@ -106,7 +106,7 @@ class CNNNetwork(nn.Module):
             nn.MaxPool2d(kernel_size=2)
         )
         self.flatten = nn.Flatten()
-        self.linear = nn.Linear(128 * 5 * 5, 5)
+        self.linear = nn.Linear(128 * 5 * 5, 6)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
@@ -116,6 +116,74 @@ class CNNNetwork(nn.Module):
         x = self.conv4(x)
         x = self.flatten(x)
         logits = self.linear(x)
+        predictions = self.softmax(logits)
+        return predictions
+
+class PhysicalAudioCNN(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        # 4 conv blocks / flatten / linear / softmax
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=16,
+                kernel_size=3,
+                stride=1,
+                padding=2
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=16,
+                out_channels=32,
+                kernel_size=3,
+                stride=1,
+                padding=2
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=32,
+                out_channels=64,
+                kernel_size=3,
+                stride=1,
+                padding=2
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=64,
+                out_channels=128,
+                kernel_size=3,
+                stride=1,
+                padding=2
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.flatten = nn.Flatten()
+        self.conv_linear = nn.Linear((128 * 5 * 5) + 5, 6)
+        #self.final_linear = nn.Linear(5 + 6, 6)
+        self.sigmoid = nn.Sigmoid()
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, audio, measures):
+        x = self.conv1(audio)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.flatten(x)
+        #audio_logits = self.conv_linear(x)
+        #audio_logits = self.sigmoid(audio_logits)
+        combined_logits = torch.cat((x, measures), 1)
+        logits = self.conv_linear(combined_logits)
         predictions = self.softmax(logits)
         return predictions
 
@@ -170,7 +238,7 @@ class CNNNetworkCQT(nn.Module):
             nn.MaxPool2d(kernel_size=2)
         )
         self.flatten = nn.Flatten()
-        self.linear = nn.Linear(128 * 5 * 9, 5)
+        self.linear = nn.Linear(128 * 5 * 9, 6)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
@@ -188,6 +256,7 @@ models_list = {
     "feedforward": FeedForwardNet,
     "cnn": CNNNetwork,
     "cnncqt":CNNNetworkCQT,
+    "physaudio":PhysicalAudioCNN,
 }
 
 

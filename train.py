@@ -63,14 +63,14 @@ def create_parser():
         "--metadata_file",
         "-m",
         type=str,
-        default="/workspaces/Underwater/DeepShip/metadata_10s.csv",
+        default="/workspaces/underwater/deepship/metadata_10s.csv",
         help="",
     )
     parser.add_argument(
         "--output_dir",
         "-o",
         type=str,
-        default="/workspaces/Underwater/classifiers/results",
+        default="/workspaces/underwater/classifiers/results",
         help="",
     )
     parser.add_argument(
@@ -85,16 +85,16 @@ def create_parser():
     return parser
 
 
-def train_single_epoch(model, data_loader, loss_fn, optimizer, device, writer, epoch):
+def train_single_epoch(model, train_dataloader, loss_fn, optimizer, device, writer, epoch):
     model.train()
-    step = epoch * len(data_loader)
-    for input_data, target_data in tqdm(data_loader):
+    step = epoch * len(train_dataloader)
+    for input_data, target_data, measures_data in tqdm(train_dataloader):
 
         input_data = input_data.to(device)
         target_data = target_data.to(device)
 
         # calculate loss
-        prediction = model(input_data)
+        prediction = model(input_data, measures_data)
         loss = loss_fn(prediction, target_data)
 
         step += 1
@@ -110,15 +110,13 @@ def train_single_epoch(model, data_loader, loss_fn, optimizer, device, writer, e
 
 
 def validate_single_epoch(model, validation_dataloader, device, writer, epoch, metrics={}):
-    correct = 0
-    total = 0
     model.eval()
-    for input_data, target_data in tqdm(validation_dataloader):
+    for input_data, target_data, measures_data in tqdm(validation_dataloader):
 
         input_data = input_data.to(device)
         target_data = target_data.to(device)
 
-        prediction = model(input_data)
+        prediction = model(input_data, measures_data)
         for metric in metrics:
             metrics[metric](prediction, target_data)
 
@@ -148,9 +146,9 @@ def train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, wr
 
 
 def main():
-    torch.manual_seed(7)
-    random.seed(7)
-    np.random.seed(7)
+    torch.manual_seed(8)
+    random.seed(8)
+    np.random.seed(8)
 
     parser = create_parser()
     args = parser.parse_args()
@@ -179,16 +177,16 @@ def main():
     # Get the training, validation and test dataloaders.
     file_name = metadata_file.split(".")[0]
 
-    train_dataset = DeepShipDataset(f"{file_name}_train.csv", transformation, sample_rate, number_of_samples)
+    train_dataset = DeepShipDataset(f"{file_name}_train.csv", sample_rate, number_of_samples, transform=transformation)
     train_dataloader = create_data_loader(train_dataset, batch_size=batch_size)
 
-    validation_dataset = DeepShipDataset(f"{file_name}_validation.csv", transformation, sample_rate, number_of_samples)
-    validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size)
+    validation_dataset = DeepShipDataset(f"{file_name}_validation.csv", sample_rate, number_of_samples, transform=transformation)
+    validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size, shuffle=False)
 
     # Declare the model.
-    model = get_model(model_name="cnncqt", device=device)
+    model = get_model(model_name="physaudio", device=device)
     print("Model Architecture")
-    summary(model, (1, 64, 126))
+    #summary(model, [(1, 64, 63), (1, 5)])
     print()
 
     # Initialise loss funtion + optimizer.
@@ -196,11 +194,11 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Initialize metrics.
-    accuracy = Accuracy(average='macro', num_classes=5)
-    precision = Precision(average='macro', num_classes=5)
-    recall = Recall(average='macro', num_classes=5)
-    f1 = F1(average='macro', num_classes=5)
-    confusion_matrix = ConfusionMatrix(num_classes=5)
+    accuracy = Accuracy(average='macro', num_classes=6)
+    precision = Precision(average='macro', num_classes=6)
+    recall = Recall(average='macro', num_classes=6)
+    f1 = F1(average='macro', num_classes=6)
+    confusion_matrix = ConfusionMatrix(num_classes=6)
 
     metrics = {
         "Accuracy":accuracy,
@@ -218,8 +216,8 @@ def main():
     writer = SummaryWriter(log_dir=log_dir)
 
     # Add model graph and hyperparams to the logs.
-    images, _ = next(iter(train_dataloader))
-    writer.add_graph(model, images)
+    images, _, measures = next(iter(train_dataloader))
+    writer.add_graph(model, [images, measures])
 
     # Call train routine.
     train(model, train_dataloader, validation_dataloader, loss_fn, optimizer, writer, num_of_epochs, checkpoint_manager, metrics=metrics, initial_epoch=init_epoch, device=device)
