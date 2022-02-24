@@ -1,2 +1,2 @@
-# underwater_snd
+# Underwater Sound Classification
 Underwater Sound Classification
