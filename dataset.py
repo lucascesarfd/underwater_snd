@@ -1,14 +1,10 @@
-import os
 import torchaudio
 import torch
 
 import pandas as pd
-import numpy as np
 
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from torch.utils.data.sampler import SubsetRandomSampler
-
 
 class DeepShipDataset(Dataset):
 
@@ -68,10 +64,11 @@ class DeepShipDataset(Dataset):
 
     def _get_metadata(self, metadata_file):
         metadata = pd.read_csv(metadata_file)
+        
         return metadata
 
 
 def create_data_loader(data, batch_size):
-    loader = DataLoader(data, batch_size=batch_size)
+    loader = DataLoader(data, batch_size=batch_size, shuffle=False)
 
     return loader

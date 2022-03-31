@@ -17,6 +17,11 @@ from dataset import DeepShipDataset, create_data_loader
 from model import FeedForwardNet, get_model, pre_processing_layers
 from checkpoint import CheckpointManager, Checkpoint
 
+SECONDS = 1
+INCLUSION_RADIUS = 3000
+EXCLUSION_RADIUS = 2000 + INCLUSION_RADIUS
+ROOT_PATH = f"/workspaces/underwater/dataset/07_classified_wav_files/inclusion_{INCLUSION_RADIUS}_exclusion_{EXCLUSION_RADIUS}/metadata/complete/filtering/filtered_metadata_{SECONDS}s.csv"
+
 
 def create_parser():
     # Create the parser
@@ -63,14 +68,14 @@ def create_parser():
         "--metadata_file",
         "-m",
         type=str,
-        default="/workspaces/Underwater/DeepShip/metadata_10s.csv",
+        default=ROOT_PATH,
         help="",
     )
     parser.add_argument(
         "--output_dir",
         "-o",
         type=str,
-        default="/workspaces/Underwater/classifiers/results",
+        default="/workspaces/underwater/dev/training/inc3000_oversampled_30epochs",
         help="",
     )
     parser.add_argument(
@@ -186,9 +191,9 @@ def main():
     validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size)
 
     # Declare the model.
-    model = get_model(model_name="cnncqt", device=device)
+    model = get_model(model_name="cnn", device=device)
     print("Model Architecture")
-    summary(model, (1, 64, 126))
+    summary(model, (1, 64, 63))
     print()
 
     # Initialise loss funtion + optimizer.
