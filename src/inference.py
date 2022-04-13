@@ -1,66 +1,115 @@
+import argparse
+import numpy as np
+import os
+import random
 import torch
-import torchaudio
+import yaml
+
+from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
+from tqdm import tqdm
 
 from dataset import DeepShipDataset, create_data_loader
-from model import FeedForwardNet, get_model
+from model import get_model, pre_processing_layers
+from utils import plot_confusion_matrix, create_dir
 
 
-class_mapping = ['tug', 'tanker', 'cargo', 'passengership']
+def create_parser():
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Execute the inference routine.")
+
+    parser.add_argument(
+        "--config_file",
+        "-c",
+        type=str,
+        default="/workspaces/underwater/dev/underwater_snd/config_files/default.yaml",
+        help="",
+    )
+
+    return parser
 
 
-def predict(model, input, target, class_mapping):
+def evaluate(model, dataloader, metrics, eval_dir, device='cpu'):
     model.eval()
-    with torch.no_grad():
-        predictions = model(input)
-        # Tensor (1, 10) -> [ [0.1, 0.01, ..., 0.6] ]
-        predicted_index = predictions[0].argmax(0)
-        predicted = class_mapping[predicted_index]
-        expected = class_mapping[target]
-        is_correct = (predicted_index == target)
-    return predicted, expected, is_correct
+    data_info = []
+    data_info.append(f"Dataset Size: {len(dataloader.dataset)}")
+    data_info.append(f"Metrics:")
+
+    for input_data, target_data in tqdm(dataloader):
+        input_data = input_data.to(device)
+        target_data = target_data.to(device)
+
+        prediction = model(input_data)
+        for metric in metrics:
+            metrics[metric](prediction, target_data)
+
+    for metric in metrics:
+        value = metrics[metric].compute()
+        if metric == "ConfusionMatrix":
+            cm_fig = plot_confusion_matrix(
+                value.numpy(), class_names=dataloader.dataset.class_mapping.keys()
+            )
+            cm_fig.savefig(os.path.join(eval_dir, "confusion.svg"))
+        else:
+            print(f"Test {metric}: {value}")
+            data_info.append(f"  {metric}: {value}")
+        metrics[metric].reset()
+    
+        # save info into txt file.
+    with open(os.path.join(eval_dir, "metrics.txt"), 'w') as f:
+        for line in data_info:
+            f.write(f"{line}\n")
 
 
 if __name__ == "__main__":
+    torch.manual_seed(8)
+    random.seed(8)
+    np.random.seed(8)
+
+    parser = create_parser()
+    args = parser.parse_args()
+    with open(args.config_file) as file:
+        args_list = yaml.load(file, Loader=yaml.FullLoader)
+
     if torch.cuda.is_available():
         device = "cuda"
     else:
         device = "cpu"
-    print(f"Using {device}")
 
-    metadata_file = "/workspaces/Underwater/DeepShip/metadata_10s.csv"
-    sample_rate = 32000
-    number_of_samples = sample_rate * 1
-    num_of_epochs = 10
-    batch_size = 25
+    print(f"Start inference using {device}\n")
 
-    # load back the model
+    sample_rate = args_list["hyperparameters"]["sample_rate"]
+    number_of_samples = sample_rate * args_list["hyperparameters"]["number_of_samples"]
+    batch_size = args_list["hyperparameters"]["batch_size"]
+    pre_processing_type = args_list["preprocessing"]["type"].lower()
+    test_metadata_path = args_list["paths"]["test_metadata"]
+    eval_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "evaluation"))
+
+    # Initialize the dataset
+    transformation = pre_processing_layers[pre_processing_type](sample_rate)
+    test_dataset = DeepShipDataset(
+        test_metadata_path, sample_rate, number_of_samples, transform=transformation
+    )
+    dataloader = create_data_loader(test_dataset, batch_size=batch_size)
+
+    # Initialize the model
     model = get_model(model_name="cnn", device=device)
-    state_dict = torch.load("final_model.pth")
+    model_weights = os.path.join(args_list["paths"]["output_dir"], "final_model", "best.pth")
+    state_dict = torch.load(model_weights)
     model.load_state_dict(state_dict)
 
-    # load urban sound dataset dataset
-    mel_spectrogram = torchaudio.transforms.MelSpectrogram(
-        sample_rate=sample_rate,
-        n_fft=1024,
-        hop_length=512,
-        n_mels=64
-    )
+    # Initialize the metrics.
+    accuracy = Accuracy(average='macro', num_classes=5)
+    precision = Precision(average='macro', num_classes=5)
+    recall = Recall(average='macro', num_classes=5)
+    f1 = F1(average='macro', num_classes=5)
+    confusion_matrix = ConfusionMatrix(num_classes=5)
 
-    deep_ship = DeepShipDataset(metadata_file, mel_spectrogram, sample_rate, number_of_samples)
+    metrics = {
+        "Accuracy":accuracy,
+        "Precision":precision,
+        "Recall":recall,
+        "F1":f1,
+        "ConfusionMatrix":confusion_matrix,
+    }
 
-    max_data = 1000
-    predictions = 0
-    total = max_data
-    for input, target in deep_ship:
-        input.unsqueeze_(0)
-        # make an inference
-        predicted, expected, is_correct = predict(model, input, target,
-                                      class_mapping)
-        predictions += is_correct
-
-        if max_data == 1:
-            break
-        else:
-            max_data -= 1 
-
-    print(f"Train Accuracy: {predictions/total}")
+    evaluate(model, dataloader, metrics, eval_dir, device=device)

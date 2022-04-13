@@ -6,9 +6,10 @@ hyperparameters:
   number_of_samples: 1
 
 paths:
-  output_dir: "/workspaces/underwater/dev/training/inc4000_50epochs_oversampled_sgd"
-  train_metadata: "/workspaces/underwater/dataset/07_classified_wav_files/inclusion_4000_exclusion_6000/metadata/filtered/filtered_metadata_1s_train_oversampled.csv"
-  validation_metadata: "/workspaces/underwater/dataset/07_classified_wav_files/inclusion_3000_exclusion_5000/metadata/filtered/filtered_metadata_1s_validation.csv"
+  output_dir: "/workspaces/underwater/dev/underwater_snd/out/mel/inc2000_50epochs_oversampled_sgd"
+  train_metadata: "/workspaces/underwater/dataset/07_classified_wav_files/inclusion_2000_exclusion_4000/metadata/filtered/filtered_metadata_1s_train_oversampled.csv"
+  validation_metadata: "/workspaces/underwater/dataset/07_classified_wav_files/inclusion_2000_exclusion_4000/metadata/filtered/filtered_metadata_1s_validation.csv"
+  test_metadata: "/workspaces/underwater/dataset/07_classified_wav_files/inclusion_2000_exclusion_4000/metadata/filtered/filtered_metadata_1s_test.csv"
 
 preprocessing:
   type: "mel"
