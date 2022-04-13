@@ -45,7 +45,7 @@ class FeedForwardNet(nn.Module):
         self.dense_layers = nn.Sequential(
             nn.Linear(64 * 63, 256),
             nn.ReLU(),
-            nn.Linear(256, 6)
+            nn.Linear(256, 5)
         )
         self.softmax = nn.Softmax(dim=1)
 
@@ -60,7 +60,7 @@ class CNNNetwork(nn.Module):
 
     def __init__(self):
         super().__init__()
-        # 4 conv blocks / flatten / linear / softmax
+        # 3 conv blocks / flatten / linear / softmax
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
@@ -69,7 +69,8 @@ class CNNNetwork(nn.Module):
                 stride=1,
                 padding=2
             ),
-            nn.ReLU(),
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
         self.conv2 = nn.Sequential(
@@ -80,7 +81,8 @@ class CNNNetwork(nn.Module):
                 stride=1,
                 padding=2
             ),
-            nn.ReLU(),
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
         self.conv3 = nn.Sequential(
@@ -91,33 +93,26 @@ class CNNNetwork(nn.Module):
                 stride=1,
                 padding=2
             ),
-            nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
-        self.conv4 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=64,
-                out_channels=128,
-                kernel_size=3,
-                stride=1,
-                padding=2
-            ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
+        self.linear = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 9 * 9, 5, bias=False),
+            nn.Dropout(p=0.1),
+            nn.LeakyReLU()
         )
-        self.flatten = nn.Flatten()
-        self.linear = nn.Linear(128 * 5 * 5, 6)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
         x = self.conv1(input_data)
         x = self.conv2(x)
         x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.flatten(x)
         logits = self.linear(x)
         predictions = self.softmax(logits)
         return predictions
+
 
 class PhysicalAudioCNN(nn.Module):
 
@@ -238,7 +233,7 @@ class CNNNetworkCQT(nn.Module):
             nn.MaxPool2d(kernel_size=2)
         )
         self.flatten = nn.Flatten()
-        self.linear = nn.Linear(128 * 5 * 9, 6)
+        self.linear = nn.Linear(128 * 5 * 9, 5)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
@@ -269,7 +264,6 @@ def init_weights(model):
         torch.nn.init.xavier_uniform_(model.weight)
         if model.bias is not None:
             torch.nn.init.zeros_(model.bias)
-
 
 
 def get_model(model_name="FeedForward", device="cpu"):

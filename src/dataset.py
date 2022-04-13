@@ -17,8 +17,8 @@ class DeepShipDataset(Dataset):
         self.target_transform = target_transform
         self.target_sample_rate = target_sample_rate
         self.num_samples = num_samples
-        self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4, 'other':5}
-        self.measures = ["t1_norm", "c1_norm", "p1_norm", "sal_norm", "sv_norm"]
+        self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4}
+        #self.measures = ["t1_norm", "c1_norm", "p1_norm", "sal_norm", "sv_norm"]
 
     def __len__(self):
         return len(self.metadata)
@@ -41,9 +41,9 @@ class DeepShipDataset(Dataset):
         if self.transform:
             signal = self.transform(signal)
 
-        measures = self._get_physical_measures(index)
+        #measures = self._get_physical_measures(index)
 
-        return signal, label, measures
+        return signal, label
 
     def _right_pad_small_samples(self, signal):
         length_signal = signal.shape[1]
@@ -77,8 +77,8 @@ class DeepShipDataset(Dataset):
         metadata = pd.read_csv(metadata_file)
         return metadata
     
-    def _get_physical_measures(self, index):
-        return self.metadata[self.measures].iloc[index].astype(np.float32).values
+    #def _get_physical_measures(self, index):
+    #    return self.metadata[self.measures].iloc[index].astype(np.float32).values
 
 
 def create_data_loader(data, batch_size, shuffle=True):

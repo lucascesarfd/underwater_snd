@@ -7,3 +7,4 @@ tensorboard
 torchsummary
 torchmetrics
 matplotlib
+pyyaml
