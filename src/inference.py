@@ -8,13 +8,17 @@ import yaml
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 from tqdm import tqdm
 
-from dataset import DeepShipDataset, create_data_loader
+from dataset import DeeperShipDataset, create_data_loader
 from model import get_model, pre_processing_layers
 from utils import plot_confusion_matrix, create_dir
 
 
 def create_parser():
-    # Create the parser
+    """Create the parser object.
+
+    Returns:
+        parser: The generated parser object with arguments
+    """
     parser = argparse.ArgumentParser(description="Execute the inference routine.")
 
     parser.add_argument(
@@ -29,6 +33,15 @@ def create_parser():
 
 
 def evaluate(model, dataloader, metrics, eval_dir, device='cpu'):
+    """Perform an evaluation on the loaded model
+
+    Args:
+        model (nn.Module): The model to be used for evaluation.
+        dataloader (Dataset): The dataloader object for the test dataset.
+        metrics (Dict): A dict containing the name and object of the metrics from torchmetrics.
+        eval_dir (os.Path): The path where the artifacts will be saved
+        device (str, optional): The device to load the tensors. Defaults to 'cpu'.
+    """
     model.eval()
     data_info = []
     data_info.append(f"Dataset Size: {len(dataloader.dataset)}")
@@ -86,7 +99,7 @@ if __name__ == "__main__":
 
     # Initialize the dataset
     transformation = pre_processing_layers[pre_processing_type](sample_rate)
-    test_dataset = DeepShipDataset(
+    test_dataset = DeeperShipDataset(
         test_metadata_path, sample_rate, number_of_samples, transform=transformation
     )
     dataloader = create_data_loader(test_dataset, batch_size=batch_size)

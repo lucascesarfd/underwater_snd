@@ -6,12 +6,29 @@ from nnAudio import Spectrogram
 
 
 def define_mel_spectrogram(sample_rate):
+    """Returns a MelSpectrogram transforms object.
+
+    Args:
+        sample_rate (int): The desired sample rate.
+
+    Returns:
+        torchaudio.transforms: The MelSpectrogram object initialized.
+    """
     mel_spectrogram = torchaudio.transforms.MelSpectrogram(
         sample_rate=sample_rate, n_fft=1024, hop_length=512, n_mels=64
     )
     return mel_spectrogram
 
+
 def define_gamma_spectrogram(sample_rate):
+    """Returns a Gammatonegram object.
+
+    Args:
+        sample_rate (int): The desired sample rate.
+
+    Returns:
+        Spectrogram: The Gammatonegram object initialized.
+    """
     gamma_spectrogram = Spectrogram.Gammatonegram(
         sr=sample_rate, n_fft=1024, n_bins=64, hop_length=512,
         window='hann', center=True, pad_mode='reflect',
@@ -20,7 +37,16 @@ def define_gamma_spectrogram(sample_rate):
     )
     return gamma_spectrogram
 
+
 def define_cqt_spectrogram(sample_rate):
+    """Returns a CQT object.
+
+    Args:
+        sample_rate (int): The desired sample rate.
+
+    Returns:
+        Spectrogram: The CQT object initialized.
+    """
     cqt_spectrogram = Spectrogram.CQT(
         sr=sample_rate, hop_length=256, fmin=32.7, fmax=None,
         n_bins=64, bins_per_octave=12, filter_scale=1, norm=1,
@@ -38,6 +64,9 @@ pre_processing_layers = {
 
 
 class FeedForwardNet(nn.Module):
+    """The standard FC approach to the Underwater
+    Classification problem.
+    """
 
     def __init__(self):
         super().__init__()
@@ -57,10 +86,12 @@ class FeedForwardNet(nn.Module):
 
 
 class CNNNetwork(nn.Module):
+    """The standard CNN approach to the Underwater
+    Classification problem.
+    """
 
     def __init__(self):
         super().__init__()
-        # 3 conv blocks / flatten / linear / softmax
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
@@ -114,76 +145,10 @@ class CNNNetwork(nn.Module):
         return predictions
 
 
-class PhysicalAudioCNN(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-        # 4 conv blocks / flatten / linear / softmax
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=1,
-                out_channels=16,
-                kernel_size=3,
-                stride=1,
-                padding=2
-            ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
-        )
-        self.conv2 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=16,
-                out_channels=32,
-                kernel_size=3,
-                stride=1,
-                padding=2
-            ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
-        )
-        self.conv3 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=32,
-                out_channels=64,
-                kernel_size=3,
-                stride=1,
-                padding=2
-            ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
-        )
-        self.conv4 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=64,
-                out_channels=128,
-                kernel_size=3,
-                stride=1,
-                padding=2
-            ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
-        )
-        self.flatten = nn.Flatten()
-        self.conv_linear = nn.Linear((128 * 5 * 5) + 5, 6)
-        #self.final_linear = nn.Linear(5 + 6, 6)
-        self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax(dim=1)
-
-    def forward(self, audio, measures):
-        x = self.conv1(audio)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.flatten(x)
-        #audio_logits = self.conv_linear(x)
-        #audio_logits = self.sigmoid(audio_logits)
-        combined_logits = torch.cat((x, measures), 1)
-        logits = self.conv_linear(combined_logits)
-        predictions = self.softmax(logits)
-        return predictions
-
-
 class CNNNetworkCQT(nn.Module):
+    """The optimized CNN approach to the Underwater
+    Classification problem using CQT.
+    """
 
     def __init__(self):
         super().__init__()
@@ -251,11 +216,15 @@ models_list = {
     "feedforward": FeedForwardNet,
     "cnn": CNNNetwork,
     "cnncqt":CNNNetworkCQT,
-    "physaudio":PhysicalAudioCNN,
 }
 
 
 def init_weights(model):
+    """Initializes the weights of a model.
+
+    Args:
+        model (nn.Model): The model to be initialized.
+    """
     if isinstance(model, nn.Linear):
         torch.nn.init.xavier_uniform_(model.weight)
         if model.bias is not None:
@@ -267,6 +236,15 @@ def init_weights(model):
 
 
 def get_model(model_name="FeedForward", device="cpu"):
+    """Returns the desired model initialized.
+
+    Args:
+        model_name (str, optional): The name of the model according to the documentation. Defaults to "FeedForward".
+        device (str, optional): The device to load the tensors. Defaults to "cpu".
+
+    Returns:
+        nn.Model: The loaded model object.
+    """
     model = models_list[model_name.lower()]().to(device)
 
     model.apply(init_weights)

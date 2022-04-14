@@ -1,8 +1,8 @@
 import argparse
 import os
-import torch
 import random
 import shutil
+import torch
 import yaml
 import numpy as np
 
@@ -13,20 +13,22 @@ from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
 from utils import create_dir
-from dataset import DeepShipDataset, create_data_loader
+from dataset import DeeperShipDataset, create_data_loader
 from model import get_model, pre_processing_layers
 from checkpoint import CheckpointManager, Checkpoint
 from train_manager import TrainManager
 
 def create_parser():
-    # Create the parser
+    """Create the parser object.
+
+    Returns:
+        parser: The generated parser object with arguments
+    """
     parser = argparse.ArgumentParser(description="Execute the training routine.")
 
     parser.add_argument(
-        "--config_file",
-        "-c",
+        "config_file",
         type=str,
-        default="/workspaces/underwater/dev/underwater_snd/config_files/default.yaml",
         help="",
     )
 
@@ -34,6 +36,9 @@ def create_parser():
 
 
 def main():
+    """The core of the training execution.
+    Initializes all the variables and call the respective methods.
+    """
     torch.manual_seed(8)
     random.seed(8)
     np.random.seed(8)
@@ -72,12 +77,12 @@ def main():
 
 
     # Get the training, validation and test dataloaders.
-    train_dataset = DeepShipDataset(
+    train_dataset = DeeperShipDataset(
         train_metadata_path, sample_rate, number_of_samples, transform=transformation
     )
     train_dataloader = create_data_loader(train_dataset, batch_size=batch_size)
 
-    validation_dataset = DeepShipDataset(
+    validation_dataset = DeeperShipDataset(
         validation_metadata_path, sample_rate, number_of_samples, transform=transformation
     )
     validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size, shuffle=False)
