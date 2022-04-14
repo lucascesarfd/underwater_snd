@@ -250,4 +250,3 @@ def get_model(model_name="FeedForward", device="cpu"):
     model.apply(init_weights)
     
     return model
-

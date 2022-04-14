@@ -6,6 +6,7 @@ import pandas as pd
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
+
 class DeeperShipDataset(Dataset):
     """A class describing the complete DeeperShip Dataset.
     """
@@ -144,7 +145,6 @@ class DeeperShipDataset(Dataset):
         """
         metadata = pd.read_csv(metadata_file)
         return metadata
-
 
 
 def create_data_loader(data, batch_size, shuffle=True):
