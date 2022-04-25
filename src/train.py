@@ -6,15 +6,14 @@ import torch
 import yaml
 import numpy as np
 
-
 from torch import nn
 from torchsummary import summary
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
 from utils import create_dir
-from dataset import DeeperShipDataset, create_data_loader
-from model import get_model, pre_processing_layers
+from dataset import get_dataset
+from model import get_model
 from checkpoint import CheckpointManager, Checkpoint
 from train_manager import TrainManager
 
@@ -57,36 +56,20 @@ def main():
         device = "cpu"
     print(f"Using {device}")
 
-    sample_rate = args_list["hyperparameters"]["sample_rate"]
-    number_of_samples = sample_rate * args_list["hyperparameters"]["number_of_samples"]
     num_of_epochs = args_list["hyperparameters"]["epochs"]
-    batch_size = args_list["hyperparameters"]["batch_size"]
     learning_rate = args_list["hyperparameters"]["learning_rate"]
+
     log_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "logs"))
     final_model_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "final_model"))
     checkpoint_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "checkpoints"))
-    pre_processing_type = args_list["preprocessing"]["type"].lower()
-    train_metadata_path = args_list["paths"]["train_metadata"]
-    validation_metadata_path = args_list["paths"]["validation_metadata"]
-
-    transformation = pre_processing_layers[pre_processing_type](sample_rate)
 
     # Copy the config file to the output dir
     config_file_name = os.path.basename(args.config_file)
     config_file_path = os.path.join(args_list["paths"]["output_dir"], config_file_name)
     shutil.copyfile(args.config_file, config_file_path)
 
-
     # Get the training, validation and test dataloaders.
-    train_dataset = DeeperShipDataset(
-        train_metadata_path, sample_rate, number_of_samples, transform=transformation
-    )
-    train_dataloader = create_data_loader(train_dataset, batch_size=batch_size)
-
-    validation_dataset = DeeperShipDataset(
-        validation_metadata_path, sample_rate, number_of_samples, transform=transformation
-    )
-    validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size, shuffle=False)
+    train_dataloader, validation_dataloader = get_dataset(args_list)
 
     # Declare the model.
     model = get_model(model_name="cnn", device=device)
@@ -95,8 +78,10 @@ def main():
 
     # Initialise loss funtion + optimizer.
     loss_fn = nn.CrossEntropyLoss()
+
     #optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.NAdam(model.parameters(), lr=learning_rate)
+    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     # Initialize metrics.

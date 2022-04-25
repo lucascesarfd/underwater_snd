@@ -1,4 +1,4 @@
-
+import math
 from tqdm import tqdm
 from utils import plot_confusion_matrix
 
@@ -94,14 +94,12 @@ class TrainManager:
             measure = self._validate_single_epoch(epoch)
             self.lr_scheduler.step()
 
-            is_best = False
             if measure.cpu().detach().numpy() > self.best_measure:
-                is_best = True
                 self.best_measure = measure.cpu().detach().numpy()
 
             # Save a checkpoint.
             if checkpoint_manager is not None:
-                checkpoint_manager.save(epoch, is_best=is_best)
+                checkpoint_manager.save(epoch, measure=math.floor(self.best_measure * 1000000))
 
             print("---------------------------")
         print("Finished training")
