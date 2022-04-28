@@ -1,6 +1,7 @@
 import math
 from tqdm import tqdm
-from utils import plot_confusion_matrix
+
+from nauta.tools.utils import plot_confusion_matrix
 
 
 class TrainManager:
@@ -23,6 +24,11 @@ class TrainManager:
         self.initial_epoch = initial_epoch
 
         self.best_measure = 0
+
+        self.current_validation_loss = 0
+        self.last_validation_loss = 0
+        self.trigger_times = 0
+        self.patience = 4
         return
 
     def _efficient_zero_grad(self, model):
@@ -32,6 +38,7 @@ class TrainManager:
     def _train_single_epoch(self, epoch):
         self.model.train()
         step = epoch * len(self.train_dataloader)
+        train_loss = 0
         for input_data, target_data in tqdm(self.train_dataloader):
 
             input_data = input_data.to(self.device)
@@ -41,6 +48,7 @@ class TrainManager:
             self._efficient_zero_grad(self.model)
             prediction = self.model(input_data)
             loss = self.loss_fn(prediction, target_data)
+            train_loss += loss.item()
 
             step += 1
             self.writer.add_scalar('Loss/train', loss, step)
@@ -49,24 +57,36 @@ class TrainManager:
             #self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+        
+        train_loss = train_loss/len(self.train_dataloader)
 
-        print(f"Train Loss: {loss.item()}")
-        return loss.item()
+        print(f"Train Loss: {train_loss}")
+        return train_loss
 
     def _validate_single_epoch(self, epoch):
         self.model.eval()
+        self.last_validation_loss = self.current_validation_loss
+        self.current_validation_loss = 0
         for input_data, target_data in tqdm(self.validation_dataloader):
 
             input_data = input_data.to(self.device)
             target_data = target_data.to(self.device)
 
             prediction = self.model(input_data)
+
+            loss = self.loss_fn(prediction, target_data)
+            self.current_validation_loss += loss.item()
+
             for metric in self.metrics:
                 self.metrics[metric](prediction, target_data)
 
         use_reference=False
         if self.reference_metric in self.metrics:
             use_reference=True
+
+        self.current_validation_loss = self.current_validation_loss/len(self.validation_dataloader)
+        self.writer.add_scalar(f'Loss/validation', self.current_validation_loss, epoch)
+        print(f"Validation Loss: {self.current_validation_loss}")
 
         for idx, metric in enumerate(self.metrics):
             value = self.metrics[metric].compute()
@@ -102,4 +122,14 @@ class TrainManager:
                 checkpoint_manager.save(epoch, measure=math.floor(self.best_measure * 1000000))
 
             print("---------------------------")
+
+            # Early stopping
+            if self.current_validation_loss > self.last_validation_loss:
+                self.trigger_times += 1
+                if self.trigger_times >= self.patience:
+                    print('Early stopping!\n')
+                    break
+            else:
+                self.trigger_times = 0
+
         print("Finished training")

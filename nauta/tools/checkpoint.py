@@ -7,7 +7,7 @@ import torch
 
 from glob import glob
 
-from utils import create_dir
+from nauta.tools.utils import create_dir
 
 
 class Checkpoint:

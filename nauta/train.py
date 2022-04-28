@@ -11,11 +11,11 @@ from torchsummary import summary
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
-from utils import create_dir
-from dataset import get_dataset
-from model import get_model
-from checkpoint import CheckpointManager, Checkpoint
-from train_manager import TrainManager
+from nauta.tools.utils import create_dir
+from nauta.data.dataset import get_dataset
+from nauta.model.model import get_model
+from nauta.tools.checkpoint import CheckpointManager, Checkpoint
+from nauta.tools.train_manager import TrainManager
 
 
 def create_parser():
@@ -74,14 +74,14 @@ def main():
     # Declare the model.
     model = get_model(model_name="cnn", device=device)
     print("Model Architecture")
-    print(summary(model, (1, 64, 63)))
+    print(summary(model, (3, 64, 63)))
 
     # Initialise loss funtion + optimizer.
     loss_fn = nn.CrossEntropyLoss()
 
     #optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    optimizer = torch.optim.NAdam(model.parameters(), lr=learning_rate)
-    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    #optimizer = torch.optim.NAdam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     # Initialize metrics.

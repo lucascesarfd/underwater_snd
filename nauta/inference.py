@@ -8,9 +8,9 @@ import yaml
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 from tqdm import tqdm
 
-from dataset import DeeperShipDataset, create_data_loader
-from model import get_model, pre_processing_layers
-from utils import plot_confusion_matrix, create_dir
+from nauta.data.dataset import DeeperShipDataset, create_data_loader
+from nauta.model.model import get_model, pre_processing_layers
+from nauta.tools.utils import plot_confusion_matrix, create_dir
 
 
 def create_parser():
