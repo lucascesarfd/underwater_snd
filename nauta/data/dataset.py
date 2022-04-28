@@ -8,7 +8,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
-from preprocessing import get_preprocessing_layer
+from nauta.data.preprocessing import get_preprocessing_layer
 
 
 class DeeperShip(Dataset):
@@ -156,7 +156,9 @@ class DeeperShipFeature(Dataset):
     """
 
     def __init__(self, root_path):
-        self.files_list = self._get_npy_list(root_path)
+        self.files_list_mel = self._get_npy_list(os.path.join(root_path, "mel"))
+        self.files_list_cqt = [x.replace("mel", "cqt") for x in self.files_list_mel]
+        self.files_list_gammatone = [x.replace("mel", "gammatone") for x in self.files_list_mel]
         self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4}
 
     def __len__(self):
@@ -165,7 +167,7 @@ class DeeperShipFeature(Dataset):
         Returns:
             int: The lenght of the dataset.
         """
-        return len(self.files_list)
+        return len(self.files_list_mel)
 
     def __getitem__(self, index):
         """Returns the item from the desired index.
@@ -176,9 +178,17 @@ class DeeperShipFeature(Dataset):
         Returns:
             tuple: The (signal,label) tuple
         """
-        feature_sample_path = os.path.normpath(self.files_list[index])
-        label = self._get_feature_sample_label(feature_sample_path)
-        signal = self._get_feature_sample(feature_sample_path)
+        mel_feature_sample_path = os.path.normpath(self.files_list_mel[index])
+        cqt_feature_sample_path = os.path.normpath(self.files_list_cqt[index])
+        gammatone_feature_sample_path = os.path.normpath(self.files_list_gammatone[index])
+
+        label = self._get_feature_sample_label(mel_feature_sample_path)
+
+        mel_signal = self._get_feature_sample(mel_feature_sample_path)
+        cqt_signal = self._get_feature_sample(cqt_feature_sample_path)
+        gammatone_signal = self._get_feature_sample(gammatone_feature_sample_path)
+
+        signal = torch.stack([mel_signal[0], cqt_signal, gammatone_signal])
 
         return signal, label
 
