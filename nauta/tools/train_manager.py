@@ -7,7 +7,8 @@ from nauta.tools.utils import plot_confusion_matrix
 class TrainManager:
     def __init__(
         self, model, loss_fn, optimizer, lr_scheduler, train_dataloader, validation_dataloader,
-        epochs, initial_epoch=0, metrics={}, reference_metric="", writer=None, device='cpu'
+        epochs, initial_epoch=0, metrics={}, reference_metric="", writer=None, device='cpu',
+        early_stop=True,
         ):
 
         self.model = model
@@ -27,6 +28,8 @@ class TrainManager:
 
         self.current_validation_loss = 0
         self.last_validation_loss = 0
+
+        self.early_stop = early_stop
         self.trigger_times = 0
         self.patience = 4
         return
@@ -39,7 +42,9 @@ class TrainManager:
         self.model.train()
         step = epoch * len(self.train_dataloader)
         train_loss = 0
-        for input_data, target_data in tqdm(self.train_dataloader):
+        for input_data, target_data in tqdm(self.train_dataloader,
+            desc=f"Train", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}"
+            ):
 
             input_data = input_data.to(self.device)
             target_data = target_data.to(self.device)
@@ -54,20 +59,22 @@ class TrainManager:
             self.writer.add_scalar('Loss/train', loss, step)
 
             # backpropagate error and update weights
-            #self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
         
         train_loss = train_loss/len(self.train_dataloader)
 
-        print(f"Train Loss: {train_loss}")
+        print(f"Loss: {train_loss:.4f}")
         return train_loss
 
     def _validate_single_epoch(self, epoch):
         self.model.eval()
         self.last_validation_loss = self.current_validation_loss
         self.current_validation_loss = 0
-        for input_data, target_data in tqdm(self.validation_dataloader):
+        display_values = []
+        for input_data, target_data in tqdm(self.validation_dataloader,
+            desc=f"Validation", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}"
+            ):
 
             input_data = input_data.to(self.device)
             target_data = target_data.to(self.device)
@@ -86,7 +93,7 @@ class TrainManager:
 
         self.current_validation_loss = self.current_validation_loss/len(self.validation_dataloader)
         self.writer.add_scalar(f'Loss/validation', self.current_validation_loss, epoch)
-        print(f"Validation Loss: {self.current_validation_loss}")
+        display_values.append(f"Loss: {self.current_validation_loss:.4f}")
 
         for idx, metric in enumerate(self.metrics):
             value = self.metrics[metric].compute()
@@ -101,9 +108,11 @@ class TrainManager:
                 )
                 self.writer.add_figure(f'Metrics/{metric}', cm_fig, epoch)
             else:
-                print(f"Validation {metric}: {value}")
+                display_values.append(f"{metric}: {value:.4f}")
                 self.writer.add_scalar(f'Metrics/{metric}', value, epoch)
             self.metrics[metric].reset()
+
+        print("  ".join(display_values))
 
         return ref_metric
 
@@ -124,12 +133,13 @@ class TrainManager:
             print("---------------------------")
 
             # Early stopping
-            if self.current_validation_loss > self.last_validation_loss:
-                self.trigger_times += 1
-                if self.trigger_times >= self.patience:
-                    print('Early stopping!\n')
-                    break
-            else:
-                self.trigger_times = 0
+            if self.early_stop:
+                if self.current_validation_loss > self.last_validation_loss:
+                    self.trigger_times += 1
+                    if self.trigger_times >= self.patience:
+                        print('Early stopping!\n')
+                        break
+                else:
+                    self.trigger_times = 0
 
         print("Finished training")

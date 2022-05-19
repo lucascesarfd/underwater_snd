@@ -5,12 +5,12 @@ import random
 import torch
 import yaml
 
-from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
+from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix, PrecisionRecallCurve
 from tqdm import tqdm
 
 from nauta.data.dataset import DeeperShipDataset, create_data_loader
 from nauta.model.model import get_model, pre_processing_layers
-from nauta.tools.utils import plot_confusion_matrix, create_dir
+from nauta.tools.utils import plot_confusion_matrix, create_dir, plot_pr_curve
 
 
 def create_parser():
@@ -62,11 +62,16 @@ def evaluate(model, dataloader, metrics, eval_dir, device='cpu'):
                 value.numpy(), class_names=dataloader.dataset.class_mapping.keys()
             )
             cm_fig.savefig(os.path.join(eval_dir, "confusion.svg"))
+        if metric == "PrecisionRecallCurve":
+            cm_fig = plot_pr_curve(
+                value.numpy(), class_names=dataloader.dataset.class_mapping.keys()
+            )
+            cm_fig.savefig(os.path.join(eval_dir, "pr_curve.svg"))
         else:
             print(f"Test {metric}: {value}")
             data_info.append(f"  {metric}: {value}")
         metrics[metric].reset()
-    
+
         # save info into txt file.
     with open(os.path.join(eval_dir, "metrics.txt"), 'w') as f:
         for line in data_info:
@@ -116,6 +121,7 @@ if __name__ == "__main__":
     recall = Recall(average='macro', num_classes=5)
     f1 = F1(average='macro', num_classes=5)
     confusion_matrix = ConfusionMatrix(num_classes=5)
+    pr_curve = PrecisionRecallCurve(num_classes=5)
 
     metrics = {
         "Accuracy":accuracy,
@@ -123,6 +129,7 @@ if __name__ == "__main__":
         "Recall":recall,
         "F1":f1,
         "ConfusionMatrix":confusion_matrix,
+        "PrecisionRecallCurve":pr_curve,
     }
 
     evaluate(model, dataloader, metrics, eval_dir, device=device)

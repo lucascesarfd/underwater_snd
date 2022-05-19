@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
 from nauta.tools.utils import create_dir
-from nauta.data.dataset import get_dataset
-from nauta.model.model import get_model
+from nauta.dataset import get_dataset
+from nauta.model import get_model
 from nauta.tools.checkpoint import CheckpointManager, Checkpoint
 from nauta.tools.train_manager import TrainManager
 
@@ -56,8 +56,15 @@ def main():
         device = "cpu"
     print(f"Using {device}")
 
+    num_of_classes = args_list["model"]["num_of_classes"]
+    input_channels = args_list["model"]["input_channels"]
+
+    optim_type = args_list["optim"]["type"]
+    early_stop = False if args_list["optim"]["early_stop"] == 0 else True
+
     num_of_epochs = args_list["hyperparameters"]["epochs"]
     learning_rate = args_list["hyperparameters"]["learning_rate"]
+    lr_scheduler_gamma = args_list["hyperparameters"]["lr_schd_gamma"]
 
     log_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "logs"))
     final_model_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "final_model"))
@@ -72,24 +79,28 @@ def main():
     train_dataloader, validation_dataloader = get_dataset(args_list)
 
     # Declare the model.
-    model = get_model(model_name="cnn", device=device)
+    model = get_model(args_list, device=device)
     print("Model Architecture")
-    print(summary(model, (3, 64, 63)))
+    print(summary(model, (input_channels, 64, 63)))
 
     # Initialise loss funtion + optimizer.
     loss_fn = nn.CrossEntropyLoss()
 
-    #optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    #optimizer = torch.optim.NAdam(model.parameters(), lr=learning_rate)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    if optim_type == "adam":
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    elif optim_type == "nadam":
+        optimizer = torch.optim.NAdam(model.parameters(), lr=learning_rate)
+    else:
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=lr_scheduler_gamma)
 
     # Initialize metrics.
-    accuracy = Accuracy(average='macro', num_classes=5)
-    precision = Precision(average='macro', num_classes=5)
-    recall = Recall(average='macro', num_classes=5)
-    f1 = F1(average='macro', num_classes=5)
-    confusion_matrix = ConfusionMatrix(num_classes=5)
+    accuracy = Accuracy(average='macro', num_classes=num_of_classes)
+    precision = Precision(average='macro', num_classes=num_of_classes)
+    recall = Recall(average='macro', num_classes=num_of_classes)
+    f1 = F1(average='macro', num_classes=num_of_classes)
+    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes)
 
     metrics = {
         "Accuracy":accuracy,
@@ -103,7 +114,8 @@ def main():
     checkpoint_manager = CheckpointManager(
         Checkpoint(model, optimizer), checkpoint_dir, device, max_to_keep=5, keep_best=True
     )
-    init_epoch = checkpoint_manager.restore_or_initialize()
+    last_epoch = checkpoint_manager.restore_or_initialize()
+    init_epoch = last_epoch + 1 if last_epoch != 0 else 0
 
     # Create tensorboard writer.
     writer = SummaryWriter(log_dir=log_dir)
@@ -125,7 +137,8 @@ def main():
         metrics=metrics,
         reference_metric="Accuracy",
         writer=writer,
-        device=device
+        device=device,
+        early_stop=early_stop,
         )
 
     train_manager.start_train(checkpoint_manager)
