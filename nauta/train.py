@@ -64,7 +64,7 @@ def main():
 
     num_of_epochs = args_list["hyperparameters"]["epochs"]
     learning_rate = args_list["hyperparameters"]["learning_rate"]
-    lr_scheduler_gamma = args_list["hyperparameters"]["lr_schd_gamma"]
+    lr_schd_gamma = args_list["hyperparameters"]["lr_schd_gamma"]
 
     log_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "logs"))
     final_model_dir = create_dir(os.path.join(args_list["paths"]["output_dir"], "final_model"))
@@ -93,10 +93,12 @@ def main():
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
-    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=lr_scheduler_gamma)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=lr_schd_gamma)
 
     # Initialize metrics.
     accuracy = Accuracy(average='macro', num_classes=num_of_classes)
+    accuracy_micro = Accuracy(average='micro', num_classes=num_of_classes)
+    accuracy_weight = Accuracy(average='weighted', num_classes=num_of_classes)
     precision = Precision(average='macro', num_classes=num_of_classes)
     recall = Recall(average='macro', num_classes=num_of_classes)
     f1 = F1(average='macro', num_classes=num_of_classes)
@@ -104,6 +106,8 @@ def main():
 
     metrics = {
         "Accuracy":accuracy,
+        "AccuracyMicro":accuracy_micro,
+        "AccuracyWeighted":accuracy_weight,
         "Precision":precision,
         "Recall":recall,
         "F1":f1,

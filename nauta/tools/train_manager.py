@@ -61,9 +61,10 @@ class TrainManager:
             # backpropagate error and update weights
             loss.backward()
             self.optimizer.step()
-        
+
         train_loss = train_loss/len(self.train_dataloader)
 
+        self.writer.add_scalar('Loss/train_epoch', train_loss, step)
         print(f"Loss: {train_loss:.4f}")
         return train_loss
 
@@ -121,6 +122,8 @@ class TrainManager:
             print(f"Epoch {epoch+1}")
             loss = self._train_single_epoch(epoch)
             measure = self._validate_single_epoch(epoch)
+
+            self.writer.add_scalar(f'Hyper/lr', self.optimizer.param_groups[0]["lr"], epoch)
             self.lr_scheduler.step()
 
             if measure.cpu().detach().numpy() > self.best_measure:

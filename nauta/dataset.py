@@ -3,7 +3,6 @@ from torch.utils.data import DataLoader
 from nauta.preprocessing import get_preprocessing_layer
 
 from nauta.one_stage.dataset import DeeperShipFeature, DeeperShip
-from nauta.two_stage.dataset import VesselDeeperShipFeature
 
 def create_data_loader(data, batch_size, shuffle=True):
     """Creates a pytorch dataloader from a Dataset.
@@ -34,13 +33,18 @@ def get_dataset(config):
         batch_size = config["hyperparameters"]["batch_size"]
         train_dataset_path = config["dataset"]["train_root_path"]
         validation_dataset_path = config["dataset"]["validation_root_path"]
+        preprocessings = config["dataset"]["preprocess"]
         num_of_classes = config["model"]["num_of_classes"]
 
         # Get the training and validation.
-        train_dataset = DeeperShipFeature(train_dataset_path, num_of_classes=num_of_classes)
+        train_dataset = DeeperShipFeature(
+            train_dataset_path, num_of_classes=num_of_classes, preprocessing=preprocessings
+        )
         train_dataloader = create_data_loader(train_dataset, batch_size=batch_size)
 
-        validation_dataset = DeeperShipFeature(validation_dataset_path, num_of_classes=num_of_classes)
+        validation_dataset = DeeperShipFeature(
+            validation_dataset_path, num_of_classes=num_of_classes, preprocessing=preprocessings
+        )
         validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size, shuffle=False)
         return train_dataloader, validation_dataloader
     else:

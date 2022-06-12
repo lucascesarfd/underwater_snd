@@ -10,8 +10,14 @@ def define_mel_spectrogram(sample_rate):
     Returns:
         torchaudio.transforms: The MelSpectrogram object initialized.
     """
-    mel_spectrogram = torchaudio.transforms.MelSpectrogram(
-        sample_rate=sample_rate, n_fft=1024, hop_length=512, n_mels=64
+    #mel_spectrogram = torchaudio.transforms.MelSpectrogram(
+    #    sample_rate=sample_rate, n_fft=1024, hop_length=512, n_mels=64
+    #)
+    mel_spectrogram = Spectrogram.MelSpectrogram(
+        sr=sample_rate, n_fft=1024, n_mels=64, hop_length=512,
+        window='hann', center=True, pad_mode='reflect', power=2.0,
+        htk=False, fmin=0.0, fmax=None, norm=1, trainable_mel=False,
+        trainable_STFT=False, verbose=False
     )
     return mel_spectrogram
 

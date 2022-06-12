@@ -152,16 +152,26 @@ class DeeperShipFeature(Dataset):
     """A class describing the output features from DeeperShip Dataset.
     """
 
-    def __init__(self, root_path, num_of_classes=5):
+    def __init__(self, root_path, num_of_classes=5, preprocessing = ["mel","gammatone","cqt"]):
         if num_of_classes == 5:
             self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4}
             exclude_back = False
         elif num_of_classes == 4:
             self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3}
             exclude_back = True
-        self.files_list_mel = self._get_npy_list(os.path.join(root_path, "mel"), exclude_back)
-        self.files_list_cqt = [x.replace("mel", "cqt") for x in self.files_list_mel]
-        self.files_list_gammatone = [x.replace("mel", "gammatone") for x in self.files_list_mel]
+
+        self.preprocessing = preprocessing
+        self.files_list = []
+        self.files_list.append([])
+        for dir in root_path:
+            self.files_list[0].extend(
+                self._get_npy_list(os.path.join(dir, self.preprocessing[0]), exclude_back)
+            )
+
+        for pre in self.preprocessing[1:]:
+            self.files_list.append(
+                [x.replace(self.preprocessing[0], pre) for x in self.files_list[0]]
+            )
 
     def __len__(self):
         """Returns the lenght of the dataset.
@@ -169,7 +179,7 @@ class DeeperShipFeature(Dataset):
         Returns:
             int: The lenght of the dataset.
         """
-        return len(self.files_list_mel)
+        return len(self.files_list[0])
 
     def __getitem__(self, index):
         """Returns the item from the desired index.
@@ -180,27 +190,16 @@ class DeeperShipFeature(Dataset):
         Returns:
             tuple: The (signal,label) tuple
         """
-        mel_feature_sample_path = os.path.normpath(self.files_list_mel[index])
-        cqt_feature_sample_path = os.path.normpath(self.files_list_cqt[index])
-        gammatone_feature_sample_path = os.path.normpath(self.files_list_gammatone[index])
+        signals = []
 
-        label = self._get_feature_sample_label(mel_feature_sample_path)
+        for file_list in self.files_list:
+            path = os.path.normpath(file_list[index])
+            signals.append(self._get_feature_sample(path))
 
-        mel_signal = self._get_feature_sample(mel_feature_sample_path)
-        cqt_signal = self._get_feature_sample(cqt_feature_sample_path)
-        gammatone_signal = self._get_feature_sample(gammatone_feature_sample_path)
+        label = self._get_feature_sample_label(path)
 
-        signal = torch.stack([mel_signal, cqt_signal, gammatone_signal])
-
+        signal = torch.stack(signals)
         return signal, label
-
-    #def _get_npy_list(self, root_path):
-    #    npy_list = []
-    #    for root, dirs, files in os.walk(root_path, topdown=False):
-    #        for name in files:
-    #            if name.endswith(".npy"):
-    #                npy_list.append(os.path.join(root, name))
-    #    return npy_list
 
     def _get_npy_list(self, root_path, exclude_back=False):
         npy_list = []
@@ -211,7 +210,6 @@ class DeeperShipFeature(Dataset):
             for name in files:
                 if name.endswith(".npy"):
                     npy_list.append(os.path.join(root, name))
-
         return npy_list
 
     def _get_feature_sample_label(self, feature_sample_path):
