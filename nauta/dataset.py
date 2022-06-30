@@ -19,12 +19,51 @@ def create_data_loader(data, batch_size, shuffle=True):
 
     return loader
 
+def get_split_dataloader(config, split="test", shuffle=False):
+    """Returns the desired dataloader for the selected split.
+
+    Args:
+        config (dict, required): The dict resulting from the YAML config file.
+
+    Returns:
+        DataLoader : The desired dataloader object.
+    """
+    if config["dataset"]["type"] == "deepershipfeature":
+        batch_size = config["hyperparameters"]["batch_size"]
+        dataset_path = config["dataset"][f"{split}_root_path"]
+        preprocessings = config["dataset"]["preprocess"]
+        num_of_classes = config["model"]["num_of_classes"]
+
+        # Get the dataset and dataloader.
+        dataset = DeeperShipFeature(
+            dataset_path, num_of_classes=num_of_classes, preprocessing=preprocessings
+        )
+        dataloader = create_data_loader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    else:
+        sample_rate = config["hyperparameters"]["sample_rate"]
+        number_of_samples = sample_rate * config["hyperparameters"]["number_of_samples"]
+        batch_size = config["hyperparameters"]["batch_size"]
+
+        metadata_path = config["dataset"][f"{split}_metadata"]
+
+        pre_processing_type = config["preprocessing"]["type"].lower()
+        transformation = get_preprocessing_layer(pre_processing_type, sample_rate)
+
+        # Get the dataset and dataloader.
+        dataset = DeeperShip(
+            metadata_path, sample_rate, number_of_samples, transform=transformation
+        )
+        dataloader = create_data_loader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    return dataloader
+
 
 def get_dataset(config):
     """Returns the desired dataloaders for validation and train.
 
     Args:
-        model_name (str, required): The name of the dataset according to the documentation.
+        config (dict, required): The dict resulting from the YAML config file.
 
     Returns:
         DataLoader, DataLoader : The train and the validation dataloaders, respectively.

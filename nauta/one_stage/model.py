@@ -86,7 +86,8 @@ class CNNNetwork(nn.Module):
             linear_dim = 64 * 9 * 9
         elif self.depth == 4:
             self.conv_layers = [self.conv2, self.conv3, self.conv4]
-            linear_dim = 128 * 5 * 5
+            #linear_dim = 128 * 5 * 5
+            linear_dim = 128 * 7 * 9 # best until now
 
         self.linear = nn.Sequential(
             nn.Flatten(),
@@ -101,7 +102,6 @@ class CNNNetwork(nn.Module):
         x = self.conv1(input_data)
         for layer in self.conv_layers:
             x = layer(x)
-
         logits = self.linear(x)
         predictions = self.softmax(logits)
         return predictions

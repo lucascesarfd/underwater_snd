@@ -5,7 +5,7 @@ import itertools
 from glob import glob
 
 
-def plot_confusion_matrix(cm, class_names):
+def plot_confusion_matrix(cm, class_names, normalize=True):
     """
     Returns a matplotlib figure containing the plotted confusion matrix.
 
@@ -16,10 +16,11 @@ def plot_confusion_matrix(cm, class_names):
     np.seterr(divide='ignore', invalid='ignore')
 
     # Normalize the confusion matrix.
-    cm = np.around(cm.astype('float') / cm.sum(axis=1)
-                   [:, np.newaxis], decimals=2)
+    if normalize:
+        cm = np.around(cm.astype('float') / cm.sum(axis=1)
+                    [:, np.newaxis], decimals=2)
 
-    figure = plt.figure(figsize=(8, 8))
+    figure = plt.figure(figsize=(9, 8))
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title("Confusion matrix")
     plt.colorbar()
@@ -34,9 +35,9 @@ def plot_confusion_matrix(cm, class_names):
         color = "white" if cm[i, j] > threshold else "black"
         plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
 
-    plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+    plt.tight_layout()
     return figure
 
 

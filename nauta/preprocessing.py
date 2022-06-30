@@ -1,5 +1,10 @@
-import torchaudio
 from nnAudio import Spectrogram
+
+FREQ_BINS = 95 # This number was based on the CQT, which have 95 freq bins for 4186hz
+HOP_LENGTH = 256 # Used to generate an output of 128 on x axis
+N_FFT = 2048 # This value is UNUSED because of the freq bins is mandatory
+FMAX = 4186 # Correspond to a C8 note (Most High on a piano) (empirical)
+FMIN = 18.0 # Minimun accepted value on CQT for audios of 1s
 
 def define_mel_spectrogram(sample_rate):
     """Returns a MelSpectrogram transforms object.
@@ -10,14 +15,11 @@ def define_mel_spectrogram(sample_rate):
     Returns:
         torchaudio.transforms: The MelSpectrogram object initialized.
     """
-    #mel_spectrogram = torchaudio.transforms.MelSpectrogram(
-    #    sample_rate=sample_rate, n_fft=1024, hop_length=512, n_mels=64
-    #)
     mel_spectrogram = Spectrogram.MelSpectrogram(
-        sr=sample_rate, n_fft=1024, n_mels=64, hop_length=512,
-        window='hann', center=True, pad_mode='reflect', power=2.0,
-        htk=False, fmin=0.0, fmax=None, norm=1, trainable_mel=False,
-        trainable_STFT=False, verbose=False
+        sr=sample_rate, n_fft=N_FFT, n_mels=FREQ_BINS, hop_length=HOP_LENGTH,
+        window='hann', center=True, pad_mode='reflect',
+        power=2.0, htk=False, fmin=FMIN, fmax=FMAX, norm=1,
+        trainable_mel=False, trainable_STFT=False, verbose=False
     )
     return mel_spectrogram
 
@@ -32,9 +34,9 @@ def define_gamma_spectrogram(sample_rate):
         Spectrogram: The Gammatonegram object initialized.
     """
     gamma_spectrogram = Spectrogram.Gammatonegram(
-        sr=sample_rate, n_fft=1024, n_bins=64, hop_length=512,
+        sr=sample_rate, n_fft=N_FFT, n_bins=FREQ_BINS, hop_length=HOP_LENGTH,
         window='hann', center=True, pad_mode='reflect',
-        power=2.0, htk=False, fmin=20.0, fmax=None, norm=1,
+        power=2.0, htk=False, fmin=FMIN, fmax=FMAX, norm=1,
         trainable_bins=False, trainable_STFT=False, verbose=False
     )
     return gamma_spectrogram
@@ -50,8 +52,8 @@ def define_cqt_spectrogram(sample_rate):
         Spectrogram: The CQT object initialized.
     """
     cqt_spectrogram = Spectrogram.CQT(
-        sr=sample_rate, hop_length=512, fmin=32.7, fmax=None,
-        n_bins=64, bins_per_octave=12, filter_scale=1, norm=1,
+        sr=sample_rate, hop_length=HOP_LENGTH, fmin=FMIN, fmax=FMAX,
+        n_bins=FREQ_BINS, bins_per_octave=12, filter_scale=1, norm=1,
         window='hann', center=True, pad_mode='reflect', trainable=False,
         output_format='Magnitude', verbose=False
     )

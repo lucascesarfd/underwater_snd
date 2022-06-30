@@ -1,5 +1,4 @@
 from torch import nn
-from torchvision import models
 from nauta.one_stage.model import FeedForwardNet, CNNNetwork, CNNNetworkCQT, ResNet18
 from nauta.two_stage.model import CNNVesselNetwork
 

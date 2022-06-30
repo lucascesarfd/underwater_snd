@@ -81,7 +81,7 @@ def main():
     # Declare the model.
     model = get_model(args_list, device=device)
     print("Model Architecture")
-    print(summary(model, (input_channels, 64, 63)))
+    print(summary(model, (input_channels, 95, 126)))
 
     # Initialise loss funtion + optimizer.
     loss_fn = nn.CrossEntropyLoss()
@@ -143,7 +143,7 @@ def main():
         writer=writer,
         device=device,
         early_stop=early_stop,
-        )
+    )
 
     train_manager.start_train(checkpoint_manager)
 
