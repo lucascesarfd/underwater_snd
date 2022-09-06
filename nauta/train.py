@@ -81,7 +81,8 @@ def main():
     # Declare the model.
     model = get_model(args_list, device=device)
     print("Model Architecture")
-    print(summary(model, (input_channels, 95, 126)))
+    #print(summary(model, (input_channels, 95, 126)))
+    print(summary(model, (input_channels, 64, 63)))
 
     # Initialise loss funtion + optimizer.
     loss_fn = nn.CrossEntropyLoss()

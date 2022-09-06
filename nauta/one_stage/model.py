@@ -107,12 +107,12 @@ class CNNNetwork(nn.Module):
         return predictions
 
 
-class CNNNetworkCQT(nn.Module):
+class CNNNetworkBaseline(nn.Module):
     """The optimized CNN approach to the Underwater
     Classification problem using CQT.
     """
 
-    def __init__(self, model_depth=0, input_channels=1):
+    def __init__(self, model_depth=0, input_channels=1, out_classes=5):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
         self.conv1 = nn.Sequential(
@@ -160,7 +160,8 @@ class CNNNetworkCQT(nn.Module):
             nn.MaxPool2d(kernel_size=2)
         )
         self.flatten = nn.Flatten()
-        self.linear = nn.Linear(128 * 5 * 9, 5)
+        #self.linear = nn.Linear(128 * 5 * 9, 5)
+        self.linear = nn.Linear(128 * 5 * 5, 5)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):

@@ -107,7 +107,7 @@ if __name__ == "__main__":
     model.load_state_dict(state_dict)
 
     # Initialize the metrics.
-    accuracy = Accuracy(average='macro', num_classes=num_of_classes)
+    accuracy = Accuracy(average='micro', num_classes=num_of_classes)
     precision = Precision(average='macro', num_classes=num_of_classes)
     recall = Recall(average='macro', num_classes=num_of_classes)
     f1 = F1(average='macro', num_classes=num_of_classes)

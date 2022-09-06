@@ -1,3 +1,11 @@
+"""
+This file is used to generate the preprocessed version of the dataset.
+
+It receives the metadata CSV file and saves the CQT, Gammatone and Mel preprocessed
+versions of the dataset, on npy files.
+
+Is also possible to save the audio chunk files setting the flag saveaudio to True.
+"""
 import argparse
 import os
 import torch
@@ -107,7 +115,11 @@ def get_interleaved_metadata(metadata_path):
     metadata = metadata.reset_index(drop=True)
     return metadata
 
-def generate_dataset_artifacts(metadata_path, output_dir, target_sample_rate, number_of_samples, interleaved=True):
+def generate_dataset_artifacts(metadata_path, output_dir, target_sample_rate, number_of_samples, interleaved=True, save_audio=True):
+    artifacts_list = ["mel", "cqt", "gammatone"]
+    if save_audio:
+        artifacts_list.append("audio")
+
     if interleaved:
         metadata = get_interleaved_metadata(metadata_path)
     else:
@@ -116,7 +128,7 @@ def generate_dataset_artifacts(metadata_path, output_dir, target_sample_rate, nu
     metadata['file_index'] = metadata.index
 
     labels_names = list(metadata["label"].unique())
-    for preprocessing in ["audio", "mel", "cqt", "gammatone"]:
+    for preprocessing in artifacts_list:
         create_dir(os.path.join(output_dir, preprocessing))
         for label in labels_names:
             create_dir(os.path.join(output_dir, preprocessing, label))
@@ -134,23 +146,27 @@ def generate_dataset_artifacts(metadata_path, output_dir, target_sample_rate, nu
             audio_chunk = get_audio_chunk(audio_signal, sec_init, target_sample_rate, number_of_samples)
 
             # Audio
-            audio_path = os.path.join(output_dir, "audio", label, f"{idx}.wav")
-            torchaudio.save(audio_path, audio_chunk, target_sample_rate)
+            if "audio" in artifacts_list:
+                audio_path = os.path.join(output_dir, "audio", label, f"{idx}.wav")
+                torchaudio.save(audio_path, audio_chunk, target_sample_rate)
 
             # Mel
-            img_mel = transformation_mel(audio_chunk).cpu().numpy()[0]
-            mel_file_path = os.path.join(output_dir, "mel", label, f"{idx}.npy")
-            np.save(mel_file_path, img_mel)
+            if "mel" in artifacts_list:
+                img_mel = transformation_mel(audio_chunk).cpu().numpy()[0]
+                mel_file_path = os.path.join(output_dir, "mel", label, f"{idx}.npy")
+                np.save(mel_file_path, img_mel)
 
             # CQT
-            img_cqt = transformation_cqt(audio_chunk).cpu().numpy()[0]
-            cqt_file_path = os.path.join(output_dir, "cqt", label, f"{idx}.npy")
-            np.save(cqt_file_path, img_cqt)
+            if "cqt" in artifacts_list:
+                img_cqt = transformation_cqt(audio_chunk).cpu().numpy()[0]
+                cqt_file_path = os.path.join(output_dir, "cqt", label, f"{idx}.npy")
+                np.save(cqt_file_path, img_cqt)
 
             # Gammatone
-            img_gamma = transformation_gamma(audio_chunk).cpu().numpy()[0]
-            gamma_file_path = os.path.join(output_dir, "gammatone", label, f"{idx}.npy")
-            np.save(gamma_file_path, img_gamma)
+            if "gammatone" in artifacts_list:
+                img_gamma = transformation_gamma(audio_chunk).cpu().numpy()[0]
+                gamma_file_path = os.path.join(output_dir, "gammatone", label, f"{idx}.npy")
+                np.save(gamma_file_path, img_gamma)
 
     meta_file_path = os.path.join(output_dir, f"metadata.csv")
     metadata.to_csv(meta_file_path)
@@ -174,22 +190,25 @@ def main():
     validation_metadata_path = args_list["paths"]["validation_metadata"]
 
     interleaved = True if args_list["hyperparameters"]["interleaved"] == 1 else False
-    print(f"interleaved: {interleaved}")
+    print(f"Generating interleaved metadata..." if interleaved else f"Using original metadata...")
+
+    save_audio = True if args_list["hyperparameters"]["save_audio"] == 1 else False
+    print(f"Saving audio files..." if save_audio else f"NOT Saving audio files...")
 
     # Generate test Dataset
-    print("Generating the test dataset")
-    test_dir = create_dir(os.path.join(out_dir, "test"))
-    generate_dataset_artifacts(test_metadata_path, test_dir, sample_rate, number_of_samples, interleaved=interleaved)
+    #print("Generating the test dataset")
+    #test_dir = create_dir(os.path.join(out_dir, "test"))
+    #generate_dataset_artifacts(test_metadata_path, test_dir, sample_rate, number_of_samples, interleaved=interleaved, save_audio=save_audio)
 
     # Generate validation Dataset
-    print("Generating the validation dataset")
-    validation_dir = create_dir(os.path.join(out_dir, "validation"))
-    generate_dataset_artifacts(validation_metadata_path, validation_dir, sample_rate, number_of_samples, interleaved=interleaved)
+    #print("Generating the validation dataset")
+    #validation_dir = create_dir(os.path.join(out_dir, "validation"))
+    #generate_dataset_artifacts(validation_metadata_path, validation_dir, sample_rate, number_of_samples, interleaved=interleaved, save_audio=save_audio)
 
     # Generate train Dataset
     print("Generating the train dataset")
     train_dir = create_dir(os.path.join(out_dir, "train"))
-    generate_dataset_artifacts(train_metadata_path, train_dir, sample_rate, number_of_samples, interleaved=interleaved)
+    generate_dataset_artifacts(train_metadata_path, train_dir, sample_rate, number_of_samples, interleaved=interleaved, save_audio=save_audio)
 
 if __name__ == "__main__":
     main()

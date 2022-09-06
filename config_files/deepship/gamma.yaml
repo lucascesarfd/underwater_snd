@@ -1,0 +1,28 @@
+hyperparameters:
+  epochs: 40
+  batch_size: 25
+  learning_rate: 0.001
+  lr_schd_gamma: 0.95
+
+optim:
+  type: "adam"
+  early_stop: 0
+
+model:
+  name: "cnnbaseline"
+  cnn_depth: 4
+  num_of_classes: 5
+  input_channels: 1
+
+paths:
+  output_dir: "/workspaces/underwater/dev/underwater_snd/out_baseline/gamma_adam"
+
+dataset:
+  type: "deepershipfeature"
+  train_root_path:
+   - "/workspaces/underwater/dataset/DeepShip/preprocessed/train/"
+  validation_root_path:
+   - "/workspaces/underwater/dataset/DeepShip/preprocessed/validation/"
+  test_root_path:
+   - "/workspaces/underwater/dataset/DeepShip/preprocessed/test/"
+  preprocess: [gammatone]

@@ -1,3 +1,8 @@
+"""
+This file is used to generate the preprocessed version of the dataset based
+ on a folder with the audio wav files already stored and cropped to the 1s limit.
+"""
+
 import os
 import torchaudio
 

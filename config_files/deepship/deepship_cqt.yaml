@@ -1,0 +1,29 @@
+hyperparameters:
+  epochs: 40
+  batch_size: 25
+  learning_rate: 0.001
+  sample_rate: 32000
+  number_of_samples: 1
+  lr_schd_gamma: 0.9
+
+optim:
+  type: "adam"
+  early_stop: 0
+
+model:
+  name: "cnnbaseline"
+  cnn_depth: 4
+  num_of_classes: 5
+  input_channels: 1
+
+paths:
+  output_dir: "/workspaces/underwater/dev/underwater_snd/out_baseline/deepship_cqt_adam"
+
+dataset:
+  type: "deepership"
+  train_metadata: "/workspaces/underwater/dataset/DeepShip/metadata_1s_train.csv"
+  validation_metadata: "/workspaces/underwater/dataset/DeepShip/metadata_1s_validation.csv"
+  test_metadata: "/workspaces/underwater/dataset/DeepShip/metadata_1s_test.csv"
+
+preprocessing:
+  type: "cqt"

@@ -1,0 +1,11 @@
+hyperparameters:
+  sample_rate: 32000
+  number_of_samples: 1
+  interleaved: 0
+  save_audio: 0
+
+paths:
+  output_dir: "/workspaces/underwater/dataset/DeepShip/preprocessed/"
+  train_metadata: "/workspaces/underwater/dataset/DeepShip/metadata_1s_train.csv"
+  validation_metadata: "/workspaces/underwater/dataset/DeepShip/metadata_1s_validation.csv"
+  test_metadata: "/workspaces/underwater/dataset/DeepShip/metadata_1s_test.csv"

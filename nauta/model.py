@@ -1,11 +1,11 @@
 from torch import nn
-from nauta.one_stage.model import FeedForwardNet, CNNNetwork, CNNNetworkCQT, ResNet18
+from nauta.one_stage.model import FeedForwardNet, CNNNetwork, CNNNetworkBaseline, ResNet18
 from nauta.two_stage.model import CNNVesselNetwork
 
 models_list = {
     "feedforward": FeedForwardNet,
+    "cnnbaseline":CNNNetworkBaseline,
     "cnn": CNNNetwork,
-    "cnncqt":CNNNetworkCQT,
     "cnnvessel":CNNVesselNetwork,
     "resnet18":ResNet18,
 }
