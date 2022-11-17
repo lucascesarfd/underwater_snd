@@ -1,74 +1,11 @@
-import torch
-import torchaudio
-
 from torch import nn
-from nnAudio import Spectrogram
-
-
-def define_mel_spectrogram(sample_rate):
-    """Returns a MelSpectrogram transforms object.
-
-    Args:
-        sample_rate (int): The desired sample rate.
-
-    Returns:
-        torchaudio.transforms: The MelSpectrogram object initialized.
-    """
-    mel_spectrogram = torchaudio.transforms.MelSpectrogram(
-        sample_rate=sample_rate, n_fft=1024, hop_length=512, n_mels=64
-    )
-    return mel_spectrogram
-
-
-def define_gamma_spectrogram(sample_rate):
-    """Returns a Gammatonegram object.
-
-    Args:
-        sample_rate (int): The desired sample rate.
-
-    Returns:
-        Spectrogram: The Gammatonegram object initialized.
-    """
-    gamma_spectrogram = Spectrogram.Gammatonegram(
-        sr=sample_rate, n_fft=1024, n_bins=64, hop_length=512,
-        window='hann', center=True, pad_mode='reflect',
-        power=2.0, htk=False, fmin=20.0, fmax=None, norm=1,
-        trainable_bins=False, trainable_STFT=False, verbose=False
-    )
-    return gamma_spectrogram
-
-
-def define_cqt_spectrogram(sample_rate):
-    """Returns a CQT object.
-
-    Args:
-        sample_rate (int): The desired sample rate.
-
-    Returns:
-        Spectrogram: The CQT object initialized.
-    """
-    cqt_spectrogram = Spectrogram.CQT(
-        sr=sample_rate, hop_length=256, fmin=32.7, fmax=None,
-        n_bins=64, bins_per_octave=12, filter_scale=1, norm=1,
-        window='hann', center=True, pad_mode='reflect', trainable=False,
-        output_format='Magnitude', verbose=False
-    )
-    return cqt_spectrogram
-
-
-pre_processing_layers = {
-    "mel": define_mel_spectrogram,
-    "gammatone": define_gamma_spectrogram,
-    "cqt": define_cqt_spectrogram,
-}
-
 
 class FeedForwardNet(nn.Module):
     """The standard FC approach to the Underwater
     Classification problem.
     """
 
-    def __init__(self):
+    def __init__(self, model_depth=1, input_channels=1):
         super().__init__()
         self.flatten = nn.Flatten()
         self.dense_layers = nn.Sequential(
@@ -90,11 +27,13 @@ class CNNNetwork(nn.Module):
     Classification problem.
     """
 
-    def __init__(self):
+    def __init__(self, model_depth=3, out_classes=5, input_channels=3):
         super().__init__()
+        self.depth = model_depth
+
         self.conv1 = nn.Sequential(
             nn.Conv2d(
-                in_channels=1,
+                in_channels=input_channels,
                 out_channels=16,
                 kernel_size=3,
                 stride=1,
@@ -128,18 +67,41 @@ class CNNNetwork(nn.Module):
             nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=64,
+                out_channels=128,
+                kernel_size=3,
+                stride=1,
+                padding=2
+            ),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+
+        linear_dim = 0
+        if self.depth == 3:
+            self.conv_layers = [self.conv2, self.conv3]
+            linear_dim = 64 * 9 * 9
+        elif self.depth == 4:
+            self.conv_layers = [self.conv2, self.conv3, self.conv4]
+            #linear_dim = 128 * 5 * 5
+            linear_dim = 128 * 7 * 9 # best until now
+
         self.linear = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(64 * 9 * 9, 5, bias=False),
+            nn.Linear(linear_dim, out_classes, bias=False),
             nn.Dropout(p=0.1),
             nn.LeakyReLU()
         )
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
+        
         x = self.conv1(input_data)
-        x = self.conv2(x)
-        x = self.conv3(x)
+        for layer in self.conv_layers:
+            x = layer(x)
         logits = self.linear(x)
         predictions = self.softmax(logits)
         return predictions
@@ -150,12 +112,12 @@ class CNNNetworkCQT(nn.Module):
     Classification problem using CQT.
     """
 
-    def __init__(self):
+    def __init__(self, model_depth=0, input_channels=1):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
         self.conv1 = nn.Sequential(
             nn.Conv2d(
-                in_channels=1,
+                in_channels=input_channels,
                 out_channels=16,
                 kernel_size=3,
                 stride=1,
@@ -212,41 +174,74 @@ class CNNNetworkCQT(nn.Module):
         return predictions
 
 
-models_list = {
-    "feedforward": FeedForwardNet,
-    "cnn": CNNNetwork,
-    "cnncqt":CNNNetworkCQT,
-}
+class ResBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, downsample):
+        super().__init__()
+        if downsample:
+            self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=2),
+                nn.BatchNorm2d(out_channels)
+            )
+        else:
+            self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
+            self.shortcut = nn.Sequential()
+
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+    def forward(self, input):
+        shortcut = self.shortcut(input)
+        input = nn.ReLU()(self.bn1(self.conv1(input)))
+        input = nn.ReLU()(self.bn2(self.conv2(input)))
+        input = input + shortcut
+        return nn.ReLU()(input)
 
 
-def init_weights(model):
-    """Initializes the weights of a model.
+class ResNet18(nn.Module):
+    def __init__(self, model_depth=3, out_classes=5, input_channels=3):
+        super().__init__()
+        self.layer0 = nn.Sequential(
+            nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU()
+        )
 
-    Args:
-        model (nn.Model): The model to be initialized.
-    """
-    if isinstance(model, nn.Linear):
-        torch.nn.init.xavier_uniform_(model.weight)
-        if model.bias is not None:
-            torch.nn.init.zeros_(model.bias)
-    if isinstance(model, nn.Conv2d):
-        torch.nn.init.xavier_uniform_(model.weight)
-        if model.bias is not None:
-            torch.nn.init.zeros_(model.bias)
+        self.layer1 = nn.Sequential(
+            ResBlock(64, 64, downsample=False),
+            ResBlock(64, 64, downsample=False)
+        )
+
+        self.layer2 = nn.Sequential(
+            ResBlock(64, 128, downsample=True),
+            ResBlock(128, 128, downsample=False)
+        )
+
+        self.layer3 = nn.Sequential(
+            ResBlock(128, 256, downsample=True),
+            ResBlock(256, 256, downsample=False)
+        )
 
 
-def get_model(model_name="FeedForward", device="cpu"):
-    """Returns the desired model initialized.
+        self.layer4 = nn.Sequential(
+            ResBlock(256, 512, downsample=True),
+            ResBlock(512, 512, downsample=False)
+        )
 
-    Args:
-        model_name (str, optional): The name of the model according to the documentation. Defaults to "FeedForward".
-        device (str, optional): The device to load the tensors. Defaults to "cpu".
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        self.flatten = nn.Flatten()
+        self.fc = nn.Linear(512, out_classes)
 
-    Returns:
-        nn.Model: The loaded model object.
-    """
-    model = models_list[model_name.lower()]().to(device)
+    def forward(self, input):
+        input = self.layer0(input)
+        input = self.layer1(input)
+        input = self.layer2(input)
+        input = self.layer3(input)
+        input = self.layer4(input)
+        input = self.gap(input)
+        input = self.flatten(input)
+        input = self.fc(input)
 
-    model.apply(init_weights)
-    
-    return model
+        return input

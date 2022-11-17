@@ -33,19 +33,39 @@ python ./src/inference.py <path to config file>
 The best weights saved by the training session will be considered on the execution.
 
 ## Reference
+The results from this work were published at IEEE Access, at the following reference:
+
+[An Investigation of Preprocessing Filters and Deep Learning Methods for Vessel Type Classification With Underwater Acoustic Data](https://ieeexplore.ieee.org/document/9940921)
+
+```bibtex
+@article{domingos2022investigation,
+  author={Domingos, Lucas C. F. and Santos, Paulo E. and Skelton, Phillip S. M. and Brinkworth, Russell S. A. and Sammut, Karl},
+  journal={IEEE Access}, 
+  title={An Investigation of Preprocessing Filters and Deep Learning Methods for Vessel Type Classification With Underwater Acoustic Data}, 
+  year={2022},
+  volume={10},
+  number={},
+  pages={117582-117596},
+  doi={10.1109/ACCESS.2022.3220265}}
+```
+
 A complete literature review containing the background knowledge of this work is available on the following reference:
 
 [A Survey of Underwater Acoustic Data Classification Methods Using Deep Learning for Shoreline Surveillance](https://www.mdpi.com/1424-8220/22/6/2181)
 
 ```bibtex
 @article{domingos2022survey,
+  author={Domingos, Lucas C. F. and Santos, Paulo E. and Skelton, Phillip S. M. and Brinkworth, Russell S. A. and Sammut, Karl},
   title={A Survey of Underwater Acoustic Data Classification Methods Using Deep Learning for Shoreline Surveillance},
-  author={Domingos, Lucas CF and Santos, Paulo E and Skelton, Phillip SM and Brinkworth, Russell SA and Sammut, Karl},
-  journal={Sensors},
   volume={22},
+  ISSN={1424-8220},
+  url={http://dx.doi.org/10.3390/s22062181},
+  DOI={10.3390/s22062181},
   number={6},
-  pages={2181},
+  publisher={MDPI AG},
+  journal={Sensors},
   year={2022},
-  publisher={mdpi}
+  month={Mar},
+  pages={2181}
 }
 ```

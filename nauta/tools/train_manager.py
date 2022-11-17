@@ -1,12 +1,14 @@
-
+import math
 from tqdm import tqdm
-from utils import plot_confusion_matrix
+
+from nauta.tools.utils import plot_confusion_matrix
 
 
 class TrainManager:
     def __init__(
         self, model, loss_fn, optimizer, lr_scheduler, train_dataloader, validation_dataloader,
-        epochs, initial_epoch=0, metrics={}, reference_metric="", writer=None, device='cpu'
+        epochs, initial_epoch=0, metrics={}, reference_metric="", writer=None, device='cpu',
+        early_stop=True,
         ):
 
         self.model = model
@@ -23,6 +25,13 @@ class TrainManager:
         self.initial_epoch = initial_epoch
 
         self.best_measure = 0
+
+        self.current_validation_loss = 0
+        self.last_validation_loss = 0
+
+        self.early_stop = early_stop
+        self.trigger_times = 0
+        self.patience = 4
         return
 
     def _efficient_zero_grad(self, model):
@@ -32,7 +41,10 @@ class TrainManager:
     def _train_single_epoch(self, epoch):
         self.model.train()
         step = epoch * len(self.train_dataloader)
-        for input_data, target_data in tqdm(self.train_dataloader):
+        train_loss = 0
+        for input_data, target_data in tqdm(self.train_dataloader,
+            desc=f"Train", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}"
+            ):
 
             input_data = input_data.to(self.device)
             target_data = target_data.to(self.device)
@@ -41,32 +53,48 @@ class TrainManager:
             self._efficient_zero_grad(self.model)
             prediction = self.model(input_data)
             loss = self.loss_fn(prediction, target_data)
+            train_loss += loss.item()
 
             step += 1
             self.writer.add_scalar('Loss/train', loss, step)
 
             # backpropagate error and update weights
-            #self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-        print(f"Train Loss: {loss.item()}")
-        return loss.item()
+        train_loss = train_loss/len(self.train_dataloader)
+
+        self.writer.add_scalar('Loss/train_epoch', train_loss, step)
+        print(f"Loss: {train_loss:.4f}")
+        return train_loss
 
     def _validate_single_epoch(self, epoch):
         self.model.eval()
-        for input_data, target_data in tqdm(self.validation_dataloader):
+        self.last_validation_loss = self.current_validation_loss
+        self.current_validation_loss = 0
+        display_values = []
+        for input_data, target_data in tqdm(self.validation_dataloader,
+            desc=f"Validation", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}"
+            ):
 
             input_data = input_data.to(self.device)
             target_data = target_data.to(self.device)
 
             prediction = self.model(input_data)
+
+            loss = self.loss_fn(prediction, target_data)
+            self.current_validation_loss += loss.item()
+
             for metric in self.metrics:
                 self.metrics[metric](prediction, target_data)
 
         use_reference=False
         if self.reference_metric in self.metrics:
             use_reference=True
+
+        self.current_validation_loss = self.current_validation_loss/len(self.validation_dataloader)
+        self.writer.add_scalar(f'Loss/validation', self.current_validation_loss, epoch)
+        display_values.append(f"Loss: {self.current_validation_loss:.4f}")
 
         for idx, metric in enumerate(self.metrics):
             value = self.metrics[metric].compute()
@@ -81,9 +109,11 @@ class TrainManager:
                 )
                 self.writer.add_figure(f'Metrics/{metric}', cm_fig, epoch)
             else:
-                print(f"Validation {metric}: {value}")
+                display_values.append(f"{metric}: {value:.4f}")
                 self.writer.add_scalar(f'Metrics/{metric}', value, epoch)
             self.metrics[metric].reset()
+
+        print("  ".join(display_values))
 
         return ref_metric
 
@@ -92,16 +122,27 @@ class TrainManager:
             print(f"Epoch {epoch+1}")
             loss = self._train_single_epoch(epoch)
             measure = self._validate_single_epoch(epoch)
+
+            self.writer.add_scalar(f'Hyper/lr', self.optimizer.param_groups[0]["lr"], epoch)
             self.lr_scheduler.step()
 
-            is_best = False
             if measure.cpu().detach().numpy() > self.best_measure:
-                is_best = True
                 self.best_measure = measure.cpu().detach().numpy()
 
             # Save a checkpoint.
             if checkpoint_manager is not None:
-                checkpoint_manager.save(epoch, is_best=is_best)
+                checkpoint_manager.save(epoch, measure=math.floor(self.best_measure * 1000000))
 
             print("---------------------------")
+
+            # Early stopping
+            if self.early_stop:
+                if self.current_validation_loss > self.last_validation_loss:
+                    self.trigger_times += 1
+                    if self.trigger_times >= self.patience:
+                        print('Early stopping!\n')
+                        break
+                else:
+                    self.trigger_times = 0
+
         print("Finished training")

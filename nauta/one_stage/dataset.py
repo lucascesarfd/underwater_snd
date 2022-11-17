@@ -1,13 +1,14 @@
 import torchaudio
 import torch
+import os
 
 import pandas as pd
+import numpy as np
 
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
 
 
-class DeeperShipDataset(Dataset):
+class DeeperShip(Dataset):
     """A class describing the complete DeeperShip Dataset.
     """
 
@@ -53,7 +54,7 @@ class DeeperShipDataset(Dataset):
 
         signal, sr = torchaudio.load(
             audio_sample_path,
-            frame_offset=self.metadata.sub_init.iloc[index],
+            frame_offset=self.metadata.sub_init.iloc[index]*self.metadata.sample_rate.iloc[index],
             num_frames=self.num_samples,
         )
         signal = self._resample_to_target_sr(signal, sr)
@@ -147,17 +148,73 @@ class DeeperShipDataset(Dataset):
         return metadata
 
 
-def create_data_loader(data, batch_size, shuffle=True):
-    """Creates a pytorch dataloader from a Dataset.
-
-    Args:
-        data (Dataset): The desired dataset.
-        batch_size (int): The size of the mini batch.
-        shuffle (bool, optional): Indicates if the data needs to be shuffled. Defaults to True.
-
-    Returns:
-        DataLoader: The generated dataloader.
+class DeeperShipFeature(Dataset):
+    """A class describing the output features from DeeperShip Dataset.
     """
-    loader = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
 
-    return loader
+    def __init__(self, root_path, num_of_classes=5, preprocessing = ["mel","gammatone","cqt"]):
+        if num_of_classes == 5:
+            self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3, 'background':4}
+            exclude_back = False
+        elif num_of_classes == 4:
+            self.class_mapping = {'tug':0, 'tanker':1, 'cargo':2, 'passengership':3}
+            exclude_back = True
+
+        self.preprocessing = preprocessing
+        self.files_list = []
+        self.files_list.append([])
+        for dir in root_path:
+            self.files_list[0].extend(
+                self._get_npy_list(os.path.join(dir, self.preprocessing[0]), exclude_back)
+            )
+
+        for pre in self.preprocessing[1:]:
+            self.files_list.append(
+                [x.replace(self.preprocessing[0], pre) for x in self.files_list[0]]
+            )
+
+    def __len__(self):
+        """Returns the lenght of the dataset.
+
+        Returns:
+            int: The lenght of the dataset.
+        """
+        return len(self.files_list[0])
+
+    def __getitem__(self, index):
+        """Returns the item from the desired index.
+
+        Args:
+            index (int): The index of the desired data.
+
+        Returns:
+            tuple: The (signal,label) tuple
+        """
+        signals = []
+
+        for file_list in self.files_list:
+            path = os.path.normpath(file_list[index])
+            signals.append(self._get_feature_sample(path))
+
+        label = self._get_feature_sample_label(path)
+
+        signal = torch.stack(signals)
+        return signal, label
+
+    def _get_npy_list(self, root_path, exclude_back=False):
+        npy_list = []
+        exclude = set(['background'])
+        for root, dirs, files in os.walk(root_path, topdown=True):
+            if exclude_back:
+                dirs[:] = [d for d in dirs if d not in exclude]
+            for name in files:
+                if name.endswith(".npy"):
+                    npy_list.append(os.path.join(root, name))
+        return npy_list
+
+    def _get_feature_sample_label(self, feature_sample_path):
+        label = os.path.basename(os.path.dirname(feature_sample_path))
+        return torch.tensor(self.class_mapping[label.lower()])
+
+    def _get_feature_sample(self, feature_sample_path):
+        return torch.tensor(np.load(feature_sample_path))

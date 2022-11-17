@@ -5,7 +5,9 @@ import signal
 import numpy as np
 import torch
 
-from utils import create_dir, get_files
+from glob import glob
+
+from nauta.tools.utils import create_dir
 
 
 class Checkpoint:
@@ -113,6 +115,7 @@ class CheckpointManager:
         self.device = device
         self.latest_checkpoint = None
         self.keep_best = keep_best
+        self.best_measure = 0
 
         # create checkpoint directory if it doesn't
         # already exist
@@ -126,7 +129,8 @@ class CheckpointManager:
           The global iteration step. This is parsed from the latest
             checkpoint file if one is found, else 0 is returned.
         """
-        ckpts = get_files(self.directory, "*.ckpt")
+        ckpt_num = 0
+        ckpts = self._get_ckpt_files(self.directory, "*.ckpt")
         if ckpts:
             last_ckpt = ckpts[-1]
             status = self.checkpoint.restore(last_ckpt, self.device)
@@ -134,53 +138,79 @@ class CheckpointManager:
                 logging.info('Could not restore latest checkpoint file.')
                 return 0
             self.latest_checkpoint = last_ckpt
-            return int(os.path.basename(last_ckpt).split('.')[0])
-        return 0
+            ckpt_num = int(os.path.basename(last_ckpt).split('.')[0])
+        if self.keep_best:
+            best = self.load_best_checkpoint()
+            if best:
+                self.best_measure = int(os.path.basename(best).split('.')[0])
+        return ckpt_num
 
     def load_best_checkpoint(self):
         if self.keep_best:
-            best_ckpt = os.path.join(self.directory, "best.ckpt")
-            status = self.checkpoint.restore(best_ckpt, self.device)
-            if not status:
-                logging.info('Could not restore best checkpoint file.')
+            ckpts = glob(os.path.join(self.directory, "*.best"))
+            ckpts = [f for f in ckpts if os.path.isfile(f)]
+            if ckpts:
+                best_ckpt = ckpts[-1]
+                status = self.checkpoint.restore(best_ckpt, self.device)
+                if not status:
+                    logging.info('Could not restore best checkpoint file.')
+                    return 0
+                return best_ckpt
+        return 0
 
-    def save(self, global_step, is_best=False):
+    def save(self, global_step, measure=0):
         """
         Create a new checkpoint.
 
         Args:
           global_step (int): The iteration number which will be used
             to name the checkpoint.
+          measure (int): the metric to consider when saving the best
+            ckpt. MUST be integer.
         """
         save_path = os.path.join(
-            self.directory, "{:016d}.ckpt".format(global_step))
+            self.directory, "{:016d}.ckpt".format(global_step)
+        )
         self.checkpoint.save(save_path)
-        if is_best:
-            self.checkpoint.save(os.path.join(self.directory, "best.ckpt"))
+        if self.keep_best:
+            if measure > self.best_measure:
+                self.best_measure = measure
+                save_best = os.path.join(
+                    self.directory, "{:016d}.best".format(measure)
+                )
+                self.checkpoint.save(save_best)
 
         self.latest_checkpoint = save_path
-        self._trim_checkpoints()
+        self._trim_checkpoints("*.ckpt", self.max_to_keep)
+        self._trim_checkpoints("*.best", 1)
 
-    def _trim_checkpoints(self):
+    def _trim_checkpoints(self, pattern, to_keep):
         """
-        Trim older checkpoints until `max_to_keep` remain.
+        Trim older checkpoints until `to_keep` remain.
         """
         # get a list of checkpoints in reverse
         # chronological order
-        ckpts = get_files(self.directory, "*.ckpt")[::-1]
+        ckpts = self._get_ckpt_files(self.directory, pattern)[::-1]
 
-        # remove until `max_to_keep` remain
-        num_remove = len(ckpts) - self.max_to_keep
+        # remove until `to_keep` remain
+        num_remove = len(ckpts) - to_keep
         while num_remove > 0:
             ckpt_name = ckpts.pop()
             os.remove(ckpt_name)
             num_remove -= 1
 
-    @staticmethod
-    def load_latest_checkpoint(checkpoint, directory, device):
-        ckpts = get_files(directory, "*.ckpt")
-        if ckpts:
-            last_ckpt = ckpts[-1]
-            checkpoint.restore(last_ckpt, device)
-        else:
-            logging.error('No checkpoints found in {}.'.format(directory))
+    def _get_ckpt_files(self, d, pattern, sort=True):
+        """
+        Return a list of files in a given directory.
+
+        Args:
+            d (str): The path to the directory.
+            pattern (str): The wildcard to filter files with.
+            sort (bool): Whether to sort the returned list.
+        """
+        files = glob(os.path.join(d, pattern))
+        files = [f for f in files if os.path.isfile(f)]
+
+        if sort:
+            files.sort(key=lambda x: int(x.split("/")[-1].split(".")[0]))
+        return files
