@@ -8,8 +8,8 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class DeeperShip(Dataset):
-    """A class describing the complete DeeperShip Dataset.
+class VTUAD(Dataset):
+    """A class describing the complete VTUAD Dataset.
     """
 
     def __init__(self, metadata_file, target_sample_rate,
@@ -148,8 +148,8 @@ class DeeperShip(Dataset):
         return metadata
 
 
-class DeeperShipFeature(Dataset):
-    """A class describing the output features from DeeperShip Dataset.
+class VTUADFeature(Dataset):
+    """A class describing the output features from VTUAD Dataset.
     """
 
     def __init__(self, root_path, num_of_classes=5, preprocessing = ["mel","gammatone","cqt"]):

@@ -58,7 +58,6 @@ def get_split_dataloader(config, split="test", shuffle=False):
 
     return dataloader
 
-
 def get_dataset(config):
     """Returns the desired dataloaders for validation and train.
 

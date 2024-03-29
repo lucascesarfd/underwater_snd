@@ -11,11 +11,9 @@ from torchsummary import summary
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
-from nauta.tools.utils import create_dir
 from nauta.dataset import get_dataset
 from nauta.model import get_model
-from nauta.tools.checkpoint import CheckpointManager, Checkpoint
-from nauta.tools.train_manager import TrainManager
+from nauta.tools import CheckpointManager, Checkpoint, TrainManager, create_dir
 
 
 def create_parser():
