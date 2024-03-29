@@ -13,7 +13,8 @@ from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
 from nauta.dataset import get_dataset
 from nauta.model import get_model
-from nauta.tools import CheckpointManager, Checkpoint, TrainManager, create_dir
+from nauta.trainer import CheckpointManager, Checkpoint, TrainManager
+from nauta.tools import create_dir
 
 
 def create_parser():

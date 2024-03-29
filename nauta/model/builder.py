@@ -1,5 +1,5 @@
 from torch import nn
-from nauta.one_stage.model import FeedForwardNet, CNNNetwork, CNNNetworkCQT, ResNet18
+from nauta.model.net import FeedForwardNet, CNNNetwork, CNNNetworkCQT, ResNet18
 
 models_list = {
     "feedforward": FeedForwardNet,

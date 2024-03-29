@@ -66,5 +66,6 @@ _pre_processing_layers = {
     "cqt": define_cqt_spectrogram,
 }
 
+
 def get_preprocessing_layer(pre_processing_type, sample_rate):
     return _pre_processing_layers[pre_processing_type](sample_rate)

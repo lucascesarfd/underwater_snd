@@ -14,7 +14,7 @@ class VTUAD(Dataset):
 
     def __init__(self, metadata_file, target_sample_rate,
                  num_samples, transform=None, target_transform=None):
-        """Initialize the DeeperShipDataset class.
+        """Initialize the VTUAD class.
 
         Args:
             metadata_file (os.path): The path to the metadata csv file.
