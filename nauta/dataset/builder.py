@@ -68,7 +68,7 @@ def get_dataset(config):
         DataLoader, DataLoader : The train and the validation dataloaders, respectively.
     """
     if config["dataset"]["type"] == "VTUADfeature":
-        batch_size = config["hyperparameters"]["batch_size"]
+        batch_size = config["dataset"]["batch_size"]
         train_dataset_path = config["dataset"]["train_root_path"]
         validation_dataset_path = config["dataset"]["validation_root_path"]
         preprocessings = config["dataset"]["preprocess"]
@@ -86,14 +86,14 @@ def get_dataset(config):
         validation_dataloader = create_data_loader(validation_dataset, batch_size=batch_size, shuffle=False)
         return train_dataloader, validation_dataloader
     else:
-        sample_rate = config["hyperparameters"]["sample_rate"]
-        number_of_samples = sample_rate * config["hyperparameters"]["number_of_samples"]
-        batch_size = config["hyperparameters"]["batch_size"]
+        sample_rate = config["dataset"]["sample_rate"]
+        number_of_samples = sample_rate * config["dataset"]["number_of_samples"]
+        batch_size = config["dataset"]["batch_size"]
 
         train_metadata_path = config["dataset"]["train_metadata"]
         validation_metadata_path = config["dataset"]["validation_metadata"]
 
-        pre_processing_type = config["preprocessing"]["type"].lower()
+        pre_processing_type = config["dataset"]["preprocess"].lower()
         transformation = get_preprocessing_layer(pre_processing_type, sample_rate)
 
         # Get the training, validation and test dataloaders.

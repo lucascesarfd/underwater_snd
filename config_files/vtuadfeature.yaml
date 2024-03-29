@@ -1,0 +1,25 @@
+hyperparameters:
+  epochs: 50 # The number of epochs that the model should train.
+  learning_rate: 0.001 # Learning rate.
+  lr_schd_gamma: 0.9 # Learning rate gamma.
+
+optim:
+  type: "sgd" # Type of the optimizer. Options are ["sgd", "adam", "nadam"].
+  early_stop: 0 # 0 If do not use early stop. Any other value otherwise.
+
+model:
+  name: "resnet18" # Type of the model. Options are ["resnet18", "feedforward", "cnn", "cnncqt"].
+  cnn_depth: 4 # Only used for model type "cnn". Options are [3, 4].
+  num_of_classes: 4 # Number of predicted classes.
+  input_channels: 3 # Number of input channels.
+
+paths:
+  output_dir: "./results" # Path to the folder where outputs will be saved.
+
+dataset:
+  type: "VTUADfeature" # Type of dataset. Options are ["VTUADfeature", "VTUAD"].
+  train_root_path: "train/" # Path to the folder containing the .npy related to train split.
+  validation_root_path: "validation/" # Path to the folder containing the .npy related to validation split.
+  test_root_path: "test/" # Path to the folder containing the .npy related to test split.
+  batch_size: 25 # Batch size.
+  preprocess: ["mel","gammatone","cqt"] # A list containing the preprocessing methods. Should be just one element or all the three. Use 2 values will not work.
