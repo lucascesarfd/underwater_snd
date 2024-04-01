@@ -76,7 +76,7 @@ class Checkpoint:
         # atomic save
         save_dir = os.path.dirname(save_path)
         tmp_path = os.path.join(
-            save_dir, "tmp-{}.ckpt".format(np.random.randint(1e10)))
+            save_dir, "tmp-{}.ckpt".format(np.random.randint(1e9)))
         torch.save(state, tmp_path)
         # rename is an atomic operation in python
         # it is POSIX compliant according to docs
@@ -212,5 +212,5 @@ class CheckpointManager:
         files = [f for f in files if os.path.isfile(f)]
 
         if sort:
-            files.sort(key=lambda x: int(x.split("/")[-1].split(".")[0]))
+            files.sort(key=lambda x: int(x.split(os.sep)[-1].split(".")[0]))
         return files

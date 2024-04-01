@@ -29,7 +29,7 @@ def get_split_dataloader(config, split="test", shuffle=False):
         DataLoader : The desired dataloader object.
     """
     if config["dataset"]["type"] == "VTUADfeature":
-        batch_size = config["hyperparameters"]["batch_size"]
+        batch_size = config["dataset"]["batch_size"]
         dataset_path = config["dataset"][f"{split}_root_path"]
         preprocessings = config["dataset"]["preprocess"]
         num_of_classes = config["model"]["num_of_classes"]
@@ -41,13 +41,13 @@ def get_split_dataloader(config, split="test", shuffle=False):
         dataloader = create_data_loader(dataset, batch_size=batch_size, shuffle=shuffle)
 
     else:
-        sample_rate = config["hyperparameters"]["sample_rate"]
-        number_of_samples = sample_rate * config["hyperparameters"]["number_of_samples"]
-        batch_size = config["hyperparameters"]["batch_size"]
+        sample_rate = config["dataset"]["sample_rate"]
+        number_of_samples = sample_rate * config["dataset"]["number_of_samples"]
+        batch_size = config["dataset"]["batch_size"]
 
         metadata_path = config["dataset"][f"{split}_metadata"]
 
-        pre_processing_type = config["preprocessing"]["type"].lower()
+        pre_processing_type = config["dataset"]["preprocess"].lower()
         transformation = get_preprocessing_layer(pre_processing_type, sample_rate)
 
         # Get the dataset and dataloader.

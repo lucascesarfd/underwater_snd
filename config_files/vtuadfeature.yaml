@@ -10,7 +10,7 @@ optim:
 model:
   name: "resnet18" # Type of the model. Options are ["resnet18", "feedforward", "cnn", "cnncqt"].
   cnn_depth: 4 # Only used for model type "cnn". Options are [3, 4].
-  num_of_classes: 4 # Number of predicted classes.
+  num_of_classes: 5 # Number of predicted classes.
   input_channels: 3 # Number of input channels.
 
 paths:

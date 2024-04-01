@@ -1,3 +1,7 @@
+"""
+ATTENTION!!!
+This code is deprecated. Please refer to the preprocessing_generator.py instead.
+"""
 import argparse
 import os
 import torch
@@ -9,7 +13,7 @@ import pandas as pd
 
 from tqdm import tqdm
 from nauta.tools.utils import create_dir
-from nauta.preprocessing import get_preprocessing_layer
+from nauta.dataset.preprocessing import get_preprocessing_layer
 
 def create_parser():
     """Create the parser object.
@@ -166,15 +170,15 @@ def main():
 
     out_dir = create_dir(args_list["paths"]["output_dir"])
 
-    sample_rate = args_list["hyperparameters"]["sample_rate"]
-    number_of_samples = sample_rate * args_list["hyperparameters"]["number_of_samples"]
+    sample_rate = args_list["dataset"]["sample_rate"]
+    number_of_samples = sample_rate * args_list["dataset"]["number_of_samples"]
 
     train_metadata_path = args_list["paths"]["train_metadata"]
     test_metadata_path = args_list["paths"]["test_metadata"]
     validation_metadata_path = args_list["paths"]["validation_metadata"]
 
-    interleaved = True if args_list["hyperparameters"]["interleaved"] == 1 else False
-    print(f"interleaved: {interleaved}")
+    interleaved = True if args_list["dataset_generator"]["interleaved"] == 1 else False
+    print(f"  interleaved: {interleaved}")
 
     # Generate test Dataset
     print("Generating the test dataset")

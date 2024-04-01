@@ -95,13 +95,13 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=lr_schd_gamma)
 
     # Initialize metrics.
-    accuracy = Accuracy(average='macro', num_classes=num_of_classes)
-    accuracy_micro = Accuracy(average='micro', num_classes=num_of_classes)
-    accuracy_weight = Accuracy(average='weighted', num_classes=num_of_classes)
-    precision = Precision(average='macro', num_classes=num_of_classes)
-    recall = Recall(average='macro', num_classes=num_of_classes)
-    f1 = F1(average='macro', num_classes=num_of_classes)
-    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes)
+    accuracy = Accuracy(average='macro', num_classes=num_of_classes).to(device)
+    accuracy_micro = Accuracy(average='micro', num_classes=num_of_classes).to(device)
+    accuracy_weight = Accuracy(average='weighted', num_classes=num_of_classes).to(device)
+    precision = Precision(average='macro', num_classes=num_of_classes).to(device)
+    recall = Recall(average='macro', num_classes=num_of_classes).to(device)
+    f1 = F1(average='macro', num_classes=num_of_classes).to(device)
+    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes).to(device)
 
     metrics = {
         "Accuracy":accuracy,

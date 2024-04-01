@@ -10,8 +10,8 @@ optim:
 model:
   name: "resnet18" # Type of the model. Options are ["resnet18", "feedforward", "cnn", "cnncqt"].
   cnn_depth: 4 # Only used for model type "cnn". Options are [3, 4].
-  num_of_classes: 4 # Number of predicted classes.
-  input_channels: 3 # Number of input channels.
+  num_of_classes: 5 # Number of predicted classes.
+  input_channels: 1 # Number of input channels.
 
 paths:
   output_dir: "./results" # Path to the folder where outputs will be saved.
@@ -21,7 +21,7 @@ dataset:
   train_metadata: "/train/train.csv" # Path to the dataset train metadata.
   validation_metadata: "/validation/validation.csv" # Path to the dataset validation metadata.
   test_metadata: "/test/test.csv" # Path to the dataset test metadata.
-  batch_size: 7 # Batch size.
+  batch_size: 8 # Batch size.
   sample_rate: 32000 # Sample rate of the wav file.
   number_of_samples: 1 # Number of samples to read.
   preprocess: "mel" # preprocessing type. Options are ["mel", "cqt", "gamma"].
