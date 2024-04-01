@@ -10,3 +10,5 @@ pyyaml==6.0
 pandas==1.4.2
 scipy==1.8.0
 tqdm==4.64.0
+protobuf==3.20.1
+PySoundFile==0.9.0

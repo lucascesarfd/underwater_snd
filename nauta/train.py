@@ -125,7 +125,7 @@ def main():
 
     # Add model graph and hyperparams to the logs.
     images, _ = next(iter(train_dataloader))
-    writer.add_graph(model, images)
+    writer.add_graph(model, images.to(device))
 
     # Call train routine.
     train_manager = TrainManager(

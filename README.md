@@ -19,7 +19,7 @@ Once you have the files, just create a `config` file containing the hyperparamet
 With the `config` file updated, run the following command:
 
 ```bash
-python ./src/train.py <path to config file>
+python ./nauta/train.py <path to config file>
 ```
 
 The training session can be followed using Tensorboard. The logs are saved on the `output_dir` indicated on the `config` file.

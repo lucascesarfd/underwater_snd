@@ -24,6 +24,7 @@ class VTUAD(Dataset):
             target_transform (torch transform, optional): A transform to be used on the target data. Defaults to None.
         """
         self.metadata = self._get_metadata(metadata_file)
+        self.root_dir = os.path.dirname(metadata_file)
         self.transform = transform
         self.target_transform = target_transform
         self.target_sample_rate = target_sample_rate
@@ -47,7 +48,8 @@ class VTUAD(Dataset):
         Returns:
             tuple: The (signal,label) tuple
         """
-        audio_sample_path = self.metadata.path.iloc[index]
+        audio_file = self.metadata.iloc[index]
+        audio_sample_path = os.path.join(self.root_dir, "audio", audio_file.label, f"{audio_file.file_index}.wav")
         label = self._get_audio_sample_label(index)
         if self.target_transform:
             label = self.target_transform(label)

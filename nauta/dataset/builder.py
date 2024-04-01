@@ -15,7 +15,7 @@ def create_data_loader(data, batch_size, shuffle=True):
     Returns:
         DataLoader: The generated dataloader.
     """
-    loader = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
+    loader = DataLoader(data, num_workers=4, batch_size=batch_size, shuffle=shuffle)
 
     return loader
 
