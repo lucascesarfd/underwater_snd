@@ -57,11 +57,11 @@ def evaluate(model, dataloader, metrics, eval_dir, device='cpu'):
         value = metrics[metric].compute()
         if metric == "ConfusionMatrix":
             cm_fig_norm = plot_confusion_matrix(
-                value.numpy(), class_names=dataloader.dataset.class_mapping.keys()
+                value.cpu().detach().numpy(), class_names=dataloader.dataset.class_mapping.keys()
             )
             cm_fig_norm.savefig(os.path.join(eval_dir, "confusion.svg"))
             cm_fig = plot_confusion_matrix(
-                value.numpy(), class_names=dataloader.dataset.class_mapping.keys(), normalize=False
+                value.cpu().detach().numpy(), class_names=dataloader.dataset.class_mapping.keys(), normalize=False
             )
             cm_fig.savefig(os.path.join(eval_dir, "confusion_not_norm.svg"))
         else:
@@ -107,11 +107,11 @@ if __name__ == "__main__":
     model.load_state_dict(state_dict)
 
     # Initialize the metrics.
-    accuracy = Accuracy(average='macro', num_classes=num_of_classes)
-    precision = Precision(average='macro', num_classes=num_of_classes)
-    recall = Recall(average='macro', num_classes=num_of_classes)
-    f1 = F1(average='macro', num_classes=num_of_classes)
-    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes)
+    accuracy = Accuracy(average='macro', num_classes=num_of_classes).to(device)
+    precision = Precision(average='macro', num_classes=num_of_classes).to(device)
+    recall = Recall(average='macro', num_classes=num_of_classes).to(device)
+    f1 = F1(average='macro', num_classes=num_of_classes).to(device)
+    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes).to(device)
 
     metrics = {
         "Accuracy":accuracy,

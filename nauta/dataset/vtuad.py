@@ -8,13 +8,13 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class DeeperShip(Dataset):
-    """A class describing the complete DeeperShip Dataset.
+class VTUAD(Dataset):
+    """A class describing the complete VTUAD Dataset.
     """
 
     def __init__(self, metadata_file, target_sample_rate,
                  num_samples, transform=None, target_transform=None):
-        """Initialize the DeeperShipDataset class.
+        """Initialize the VTUAD class.
 
         Args:
             metadata_file (os.path): The path to the metadata csv file.
@@ -24,6 +24,7 @@ class DeeperShip(Dataset):
             target_transform (torch transform, optional): A transform to be used on the target data. Defaults to None.
         """
         self.metadata = self._get_metadata(metadata_file)
+        self.root_dir = os.path.dirname(metadata_file)
         self.transform = transform
         self.target_transform = target_transform
         self.target_sample_rate = target_sample_rate
@@ -47,7 +48,8 @@ class DeeperShip(Dataset):
         Returns:
             tuple: The (signal,label) tuple
         """
-        audio_sample_path = self.metadata.path.iloc[index]
+        audio_file = self.metadata.iloc[index]
+        audio_sample_path = os.path.join(self.root_dir, "audio", audio_file.label, f"{audio_file.file_index}.wav")
         label = self._get_audio_sample_label(index)
         if self.target_transform:
             label = self.target_transform(label)
@@ -148,8 +150,8 @@ class DeeperShip(Dataset):
         return metadata
 
 
-class DeeperShipFeature(Dataset):
-    """A class describing the output features from DeeperShip Dataset.
+class VTUADFeature(Dataset):
+    """A class describing the output features from VTUAD Dataset.
     """
 
     def __init__(self, root_path, num_of_classes=5, preprocessing = ["mel","gammatone","cqt"]):
@@ -163,15 +165,15 @@ class DeeperShipFeature(Dataset):
         self.preprocessing = preprocessing
         self.files_list = []
         self.files_list.append([])
-        for dir in root_path:
-            self.files_list[0].extend(
-                self._get_npy_list(os.path.join(dir, self.preprocessing[0]), exclude_back)
-            )
+        self.files_list[0].extend(
+            self._get_npy_list(os.path.join(root_path, self.preprocessing[0]), exclude_back)
+        )
 
         for pre in self.preprocessing[1:]:
             self.files_list.append(
                 [x.replace(self.preprocessing[0], pre) for x in self.files_list[0]]
             )
+
 
     def __len__(self):
         """Returns the lenght of the dataset.

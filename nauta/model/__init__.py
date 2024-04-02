@@ -1,0 +1,1 @@
+from nauta.model.builder import get_model

@@ -11,11 +11,10 @@ from torchsummary import summary
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
 
-from nauta.tools.utils import create_dir
 from nauta.dataset import get_dataset
 from nauta.model import get_model
-from nauta.tools.checkpoint import CheckpointManager, Checkpoint
-from nauta.tools.train_manager import TrainManager
+from nauta.trainer import CheckpointManager, Checkpoint, TrainManager
+from nauta.tools import create_dir
 
 
 def create_parser():
@@ -96,13 +95,13 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=lr_schd_gamma)
 
     # Initialize metrics.
-    accuracy = Accuracy(average='macro', num_classes=num_of_classes)
-    accuracy_micro = Accuracy(average='micro', num_classes=num_of_classes)
-    accuracy_weight = Accuracy(average='weighted', num_classes=num_of_classes)
-    precision = Precision(average='macro', num_classes=num_of_classes)
-    recall = Recall(average='macro', num_classes=num_of_classes)
-    f1 = F1(average='macro', num_classes=num_of_classes)
-    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes)
+    accuracy = Accuracy(average='macro', num_classes=num_of_classes).to(device)
+    accuracy_micro = Accuracy(average='micro', num_classes=num_of_classes).to(device)
+    accuracy_weight = Accuracy(average='weighted', num_classes=num_of_classes).to(device)
+    precision = Precision(average='macro', num_classes=num_of_classes).to(device)
+    recall = Recall(average='macro', num_classes=num_of_classes).to(device)
+    f1 = F1(average='macro', num_classes=num_of_classes).to(device)
+    confusion_matrix = ConfusionMatrix(num_classes=num_of_classes).to(device)
 
     metrics = {
         "Accuracy":accuracy,
@@ -126,7 +125,7 @@ def main():
 
     # Add model graph and hyperparams to the logs.
     images, _ = next(iter(train_dataloader))
-    writer.add_graph(model, images)
+    writer.add_graph(model, images.to(device))
 
     # Call train routine.
     train_manager = TrainManager(

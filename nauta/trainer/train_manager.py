@@ -105,7 +105,7 @@ class TrainManager:
                     ref_metric = value
             if metric == "ConfusionMatrix":
                 cm_fig = plot_confusion_matrix(
-                    value.numpy(), class_names=self.validation_dataloader.dataset.class_mapping.keys()
+                    value.cpu().detach().numpy(), class_names=self.validation_dataloader.dataset.class_mapping.keys()
                 )
                 self.writer.add_figure(f'Metrics/{metric}', cm_fig, epoch)
             else:
