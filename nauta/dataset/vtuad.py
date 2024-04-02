@@ -165,15 +165,15 @@ class VTUADFeature(Dataset):
         self.preprocessing = preprocessing
         self.files_list = []
         self.files_list.append([])
-        for dir in root_path:
-            self.files_list[0].extend(
-                self._get_npy_list(os.path.join(dir, self.preprocessing[0]), exclude_back)
-            )
+        self.files_list[0].extend(
+            self._get_npy_list(os.path.join(root_path, self.preprocessing[0]), exclude_back)
+        )
 
         for pre in self.preprocessing[1:]:
             self.files_list.append(
                 [x.replace(self.preprocessing[0], pre) for x in self.files_list[0]]
             )
+
 
     def __len__(self):
         """Returns the lenght of the dataset.
